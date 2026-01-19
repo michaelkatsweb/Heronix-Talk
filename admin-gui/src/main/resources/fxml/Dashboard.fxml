@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.heronix.admin.controller.DashboardController"
+            styleClass="dashboard-root">
+
+    <!-- Left Sidebar Navigation -->
+    <left>
+        <VBox styleClass="sidebar" prefWidth="250">
+            <!-- Logo Header -->
+            <HBox alignment="CENTER_LEFT" spacing="10" styleClass="sidebar-header">
+                <padding>
+                    <Insets bottom="15" left="15" right="15" top="15"/>
+                </padding>
+                <ImageView fitHeight="40" fitWidth="40" preserveRatio="true">
+                    <Image url="@/images/logo.png"/>
+                </ImageView>
+                <VBox>
+                    <Text text="Heronix Talk" styleClass="sidebar-title"/>
+                    <Text text="Admin Panel" styleClass="sidebar-subtitle"/>
+                </VBox>
+            </HBox>
+
+            <Separator/>
+
+            <!-- Navigation Menu -->
+            <VBox spacing="5" styleClass="nav-menu" VBox.vgrow="ALWAYS">
+                <padding>
+                    <Insets bottom="10" left="10" right="10" top="10"/>
+                </padding>
+
+                <Button fx:id="navDashboard" text="Dashboard" onAction="#showDashboard"
+                        styleClass="nav-button, nav-button-active" maxWidth="Infinity"
+                        alignment="CENTER_LEFT" graphicTextGap="10">
+                    <graphic>
+                        <Label text="📊" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+
+                <Label text="USER MANAGEMENT" styleClass="nav-section-title"/>
+
+                <Button fx:id="navUsers" text="Users" onAction="#showUsers"
+                        styleClass="nav-button" maxWidth="Infinity"
+                        alignment="CENTER_LEFT" graphicTextGap="10">
+                    <graphic>
+                        <Label text="👥" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+
+                <Button fx:id="navRoles" text="Roles &amp; Permissions" onAction="#showRoles"
+                        styleClass="nav-button" maxWidth="Infinity"
+                        alignment="CENTER_LEFT" graphicTextGap="10">
+                    <graphic>
+                        <Label text="🔐" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+
+                <Label text="CONFIGURATION" styleClass="nav-section-title"/>
+
+                <Button fx:id="navSecurity" text="Security Policy" onAction="#showSecurityPolicy"
+                        styleClass="nav-button" maxWidth="Infinity"
+                        alignment="CENTER_LEFT" graphicTextGap="10">
+                    <graphic>
+                        <Label text="🛡️" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+
+                <Button fx:id="navNetwork" text="Network Settings" onAction="#showNetworkConfig"
+                        styleClass="nav-button" maxWidth="Infinity"
+                        alignment="CENTER_LEFT" graphicTextGap="10">
+                    <graphic>
+                        <Label text="🌐" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+
+                <Button fx:id="navSystem" text="System Config" onAction="#showSystemConfig"
+                        styleClass="nav-button" maxWidth="Infinity"
+                        alignment="CENTER_LEFT" graphicTextGap="10">
+                    <graphic>
+                        <Label text="⚙️" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+
+                <Label text="MONITORING" styleClass="nav-section-title"/>
+
+                <Button fx:id="navAuditLogs" text="Audit Logs" onAction="#showAuditLogs"
+                        styleClass="nav-button" maxWidth="Infinity"
+                        alignment="CENTER_LEFT" graphicTextGap="10">
+                    <graphic>
+                        <Label text="📋" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+
+                <!-- Spacer -->
+                <Region VBox.vgrow="ALWAYS"/>
+
+                <!-- User Info and Logout -->
+                <Separator/>
+
+                <HBox alignment="CENTER_LEFT" spacing="10" styleClass="user-info-box">
+                    <padding>
+                        <Insets bottom="5" left="5" right="5" top="5"/>
+                    </padding>
+                    <VBox HBox.hgrow="ALWAYS">
+                        <Label fx:id="currentUserLabel" text="Admin User" styleClass="current-user-name"/>
+                        <Label fx:id="currentRoleLabel" text="Administrator" styleClass="current-user-role"/>
+                    </VBox>
+                </HBox>
+
+                <Button text="Sign Out" onAction="#handleLogout"
+                        styleClass="nav-button, logout-button" maxWidth="Infinity"
+                        alignment="CENTER_LEFT" graphicTextGap="10">
+                    <graphic>
+                        <Label text="🚪" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+            </VBox>
+        </VBox>
+    </left>
+
+    <!-- Main Content Area -->
+    <center>
+        <VBox styleClass="main-content">
+            <!-- Top Header Bar -->
+            <HBox alignment="CENTER_LEFT" spacing="15" styleClass="header-bar">
+                <padding>
+                    <Insets bottom="15" left="20" right="20" top="15"/>
+                </padding>
+                <VBox HBox.hgrow="ALWAYS">
+                    <Label fx:id="pageTitle" text="Dashboard" styleClass="page-title"/>
+                    <Label fx:id="pageSubtitle" text="System overview and statistics" styleClass="page-subtitle"/>
+                </VBox>
+
+                <Button fx:id="refreshButton" text="Refresh" onAction="#handleRefresh"
+                        styleClass="btn-secondary">
+                    <graphic>
+                        <Label text="🔄" styleClass="btn-icon"/>
+                    </graphic>
+                </Button>
+
+                <Label fx:id="lastUpdatedLabel" text="Last updated: --" styleClass="last-updated"/>
+            </HBox>
+
+            <!-- Content Container -->
+            <StackPane fx:id="contentPane" VBox.vgrow="ALWAYS" styleClass="content-pane">
+                <padding>
+                    <Insets bottom="20" left="20" right="20" top="20"/>
+                </padding>
+
+                <!-- Default Dashboard Content -->
+                <ScrollPane fx:id="dashboardContent" fitToWidth="true" styleClass="scroll-pane-dark">
+                    <VBox spacing="20">
+                        <!-- Stats Cards Row -->
+                        <HBox spacing="20">
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                                <Label text="Total Users" styleClass="stat-label"/>
+                                <Label fx:id="totalUsersLabel" text="--" styleClass="stat-value"/>
+                                <Label fx:id="activeUsersLabel" text="-- active" styleClass="stat-sublabel"/>
+                            </VBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                                <Label text="Online Now" styleClass="stat-label"/>
+                                <Label fx:id="onlineUsersLabel" text="--" styleClass="stat-value, stat-value-success"/>
+                                <Label fx:id="activeSessionsLabel" text="-- sessions" styleClass="stat-sublabel"/>
+                            </VBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                                <Label text="Messages Today" styleClass="stat-label"/>
+                                <Label fx:id="todayMessagesLabel" text="--" styleClass="stat-value"/>
+                                <Label fx:id="totalMessagesLabel" text="-- total" styleClass="stat-sublabel"/>
+                            </VBox>
+                            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS">
+                                <Label text="Conversations" styleClass="stat-label"/>
+                                <Label fx:id="totalConversationsLabel" text="--" styleClass="stat-value"/>
+                                <Label fx:id="totalGroupsLabel" text="-- groups" styleClass="stat-sublabel"/>
+                            </VBox>
+                        </HBox>
+
+                        <!-- System Health Section -->
+                        <VBox styleClass="panel">
+                            <HBox alignment="CENTER_LEFT" styleClass="panel-header">
+                                <Label text="System Health" styleClass="panel-title"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Label fx:id="systemStatusLabel" text="HEALTHY" styleClass="status-badge, status-healthy"/>
+                            </HBox>
+                            <HBox spacing="30" styleClass="panel-content">
+                                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                                    <HBox alignment="CENTER_LEFT">
+                                        <Label text="CPU Usage" styleClass="health-label"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label fx:id="cpuUsageLabel" text="--%" styleClass="health-value"/>
+                                    </HBox>
+                                    <ProgressBar fx:id="cpuProgressBar" progress="0" maxWidth="Infinity"
+                                                 styleClass="health-progress"/>
+                                </VBox>
+                                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                                    <HBox alignment="CENTER_LEFT">
+                                        <Label text="Memory" styleClass="health-label"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label fx:id="memoryUsageLabel" text="-- / -- MB" styleClass="health-value"/>
+                                    </HBox>
+                                    <ProgressBar fx:id="memoryProgressBar" progress="0" maxWidth="Infinity"
+                                                 styleClass="health-progress"/>
+                                </VBox>
+                                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                                    <HBox alignment="CENTER_LEFT">
+                                        <Label text="Disk" styleClass="health-label"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label fx:id="diskUsageLabel" text="-- / -- GB" styleClass="health-value"/>
+                                    </HBox>
+                                    <ProgressBar fx:id="diskProgressBar" progress="0" maxWidth="Infinity"
+                                                 styleClass="health-progress"/>
+                                </VBox>
+                            </HBox>
+                            <HBox spacing="30" styleClass="panel-footer">
+                                <Label fx:id="uptimeLabel" text="Uptime: --" styleClass="health-footer-item"/>
+                                <Label fx:id="dbStatusLabel" text="Database: --" styleClass="health-footer-item"/>
+                                <Label fx:id="connectionsLabel" text="Connections: --" styleClass="health-footer-item"/>
+                            </HBox>
+                        </VBox>
+
+                        <!-- Quick Actions -->
+                        <VBox styleClass="panel">
+                            <Label text="Quick Actions" styleClass="panel-title"/>
+                            <HBox spacing="15" styleClass="panel-content">
+                                <Button text="Add User" onAction="#quickAddUser" styleClass="btn-action"/>
+                                <Button text="Create Role" onAction="#quickCreateRole" styleClass="btn-action"/>
+                                <Button text="View Logs" onAction="#showAuditLogs" styleClass="btn-action"/>
+                                <Button text="Backup Data" onAction="#quickBackup" styleClass="btn-action"/>
+                            </HBox>
+                        </VBox>
+                    </VBox>
+                </ScrollPane>
+
+                <!-- Loading Overlay -->
+                <VBox fx:id="loadingOverlay" alignment="CENTER" visible="false" styleClass="loading-overlay">
+                    <ProgressIndicator prefWidth="50" prefHeight="50"/>
+                    <Label text="Loading..." styleClass="loading-text"/>
+                </VBox>
+            </StackPane>
+        </VBox>
+    </center>
+</BorderPane>

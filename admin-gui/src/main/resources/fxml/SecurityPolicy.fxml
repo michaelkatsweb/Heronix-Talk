@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<ScrollPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.heronix.admin.controller.SecurityPolicyController"
+            fitToWidth="true" styleClass="scroll-pane-dark">
+
+    <VBox spacing="20" styleClass="content-view">
+        <padding>
+            <Insets bottom="20" left="20" right="20" top="20"/>
+        </padding>
+
+        <!-- Password Policy Section -->
+        <VBox styleClass="panel">
+            <Label text="Password Policy" styleClass="panel-title"/>
+            <VBox spacing="15" styleClass="panel-content">
+                <HBox spacing="20" alignment="CENTER_LEFT">
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="Minimum Password Length" styleClass="field-label"/>
+                        <Spinner fx:id="minPasswordLengthSpinner" editable="true" prefWidth="120"/>
+                    </VBox>
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="Password Expiry (Days)" styleClass="field-label"/>
+                        <Spinner fx:id="passwordExpirySpinner" editable="true" prefWidth="120"/>
+                        <Label text="0 = Never expires" styleClass="field-hint"/>
+                    </VBox>
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="Password History Count" styleClass="field-label"/>
+                        <Spinner fx:id="passwordHistorySpinner" editable="true" prefWidth="120"/>
+                        <Label text="Prevent reuse of last N passwords" styleClass="field-hint"/>
+                    </VBox>
+                </HBox>
+
+                <Separator/>
+
+                <Label text="Password Requirements" styleClass="subsection-title"/>
+                <HBox spacing="30">
+                    <CheckBox fx:id="requireUppercaseCheckbox" text="Require uppercase letter"/>
+                    <CheckBox fx:id="requireLowercaseCheckbox" text="Require lowercase letter"/>
+                    <CheckBox fx:id="requireNumbersCheckbox" text="Require number"/>
+                    <CheckBox fx:id="requireSpecialCheckbox" text="Require special character"/>
+                </HBox>
+            </VBox>
+        </VBox>
+
+        <!-- Login Security Section -->
+        <VBox styleClass="panel">
+            <Label text="Login Security" styleClass="panel-title"/>
+            <VBox spacing="15" styleClass="panel-content">
+                <HBox spacing="20" alignment="CENTER_LEFT">
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="Max Login Attempts" styleClass="field-label"/>
+                        <Spinner fx:id="maxLoginAttemptsSpinner" editable="true" prefWidth="120"/>
+                    </VBox>
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="Lockout Duration (Minutes)" styleClass="field-label"/>
+                        <Spinner fx:id="lockoutDurationSpinner" editable="true" prefWidth="120"/>
+                    </VBox>
+                </HBox>
+
+                <Separator/>
+
+                <CheckBox fx:id="requireTwoFactorCheckbox" text="Require Two-Factor Authentication"/>
+            </VBox>
+        </VBox>
+
+        <!-- Session Settings Section -->
+        <VBox styleClass="panel">
+            <Label text="Session Settings" styleClass="panel-title"/>
+            <VBox spacing="15" styleClass="panel-content">
+                <HBox spacing="20" alignment="CENTER_LEFT">
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="Session Timeout (Minutes)" styleClass="field-label"/>
+                        <Spinner fx:id="sessionTimeoutSpinner" editable="true" prefWidth="120"/>
+                    </VBox>
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="Max Concurrent Sessions" styleClass="field-label"/>
+                        <Spinner fx:id="maxConcurrentSessionsSpinner" editable="true" prefWidth="120"/>
+                        <Label text="0 = Unlimited" styleClass="field-hint"/>
+                    </VBox>
+                </HBox>
+
+                <Separator/>
+
+                <HBox spacing="20">
+                    <CheckBox fx:id="allowRememberMeCheckbox" text="Allow 'Remember Me' option"/>
+                    <VBox spacing="5">
+                        <Label text="Remember Me Duration (Days)" styleClass="field-label"/>
+                        <Spinner fx:id="rememberMeDaysSpinner" editable="true" prefWidth="120"/>
+                    </VBox>
+                </HBox>
+            </VBox>
+        </VBox>
+
+        <!-- Action Buttons -->
+        <HBox spacing="15" alignment="CENTER_RIGHT">
+            <Button text="Reset to Defaults" onAction="#handleResetDefaults" styleClass="btn-secondary"/>
+            <Button text="Save Changes" onAction="#handleSave" styleClass="btn-primary"/>
+        </HBox>
+
+    </VBox>
+</ScrollPane>

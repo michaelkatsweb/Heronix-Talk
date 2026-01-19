@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.control.cell.PropertyValueFactory?>
+<?import javafx.scene.layout.*?>
+
+<HBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.heronix.admin.controller.RoleManagementController"
+      spacing="20" styleClass="content-view">
+
+    <!-- Left Panel: Roles List -->
+    <VBox spacing="15" prefWidth="350" styleClass="panel">
+        <HBox alignment="CENTER_LEFT" styleClass="panel-header">
+            <Label text="Roles" styleClass="panel-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="+ New Role" onAction="#handleCreateRole" styleClass="btn-primary-small"/>
+        </HBox>
+
+        <ListView fx:id="rolesListView" VBox.vgrow="ALWAYS" styleClass="list-dark"/>
+
+        <HBox spacing="10">
+            <Button fx:id="editRoleBtn" text="Edit" onAction="#handleEditRole" styleClass="btn-secondary"
+                    disable="true"/>
+            <Button fx:id="deleteRoleBtn" text="Delete" onAction="#handleDeleteRole" styleClass="btn-danger"
+                    disable="true"/>
+        </HBox>
+    </VBox>
+
+    <!-- Right Panel: Role Details and Permissions -->
+    <VBox spacing="15" HBox.hgrow="ALWAYS" styleClass="panel">
+        <HBox alignment="CENTER_LEFT" styleClass="panel-header">
+            <Label fx:id="roleDetailsTitle" text="Role Details" styleClass="panel-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="systemRoleBadge" text="SYSTEM" visible="false" styleClass="badge-system"/>
+        </HBox>
+
+        <VBox spacing="10" styleClass="role-info">
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Name:" styleClass="field-label" prefWidth="100"/>
+                <Label fx:id="roleNameLabel" text="--" styleClass="field-value"/>
+            </HBox>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Display Name:" styleClass="field-label" prefWidth="100"/>
+                <Label fx:id="roleDisplayNameLabel" text="--" styleClass="field-value"/>
+            </HBox>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Description:" styleClass="field-label" prefWidth="100"/>
+                <Label fx:id="roleDescriptionLabel" text="--" styleClass="field-value" wrapText="true"/>
+            </HBox>
+        </VBox>
+
+        <Separator/>
+
+        <Label text="Permissions" styleClass="subsection-title"/>
+
+        <ScrollPane VBox.vgrow="ALWAYS" fitToWidth="true" styleClass="scroll-pane-dark">
+            <VBox fx:id="permissionsContainer" spacing="15">
+                <padding>
+                    <Insets bottom="10" left="10" right="10" top="10"/>
+                </padding>
+
+                <!-- User Permissions -->
+                <VBox spacing="5" styleClass="permission-group">
+                    <Label text="User Management" styleClass="permission-group-title"/>
+                    <CheckBox fx:id="permUserView" text="View users"/>
+                    <CheckBox fx:id="permUserCreate" text="Create users"/>
+                    <CheckBox fx:id="permUserEdit" text="Edit users"/>
+                    <CheckBox fx:id="permUserDelete" text="Delete users"/>
+                    <CheckBox fx:id="permUserLock" text="Lock/Unlock users"/>
+                    <CheckBox fx:id="permUserResetPassword" text="Reset passwords"/>
+                </VBox>
+
+                <!-- Role Permissions -->
+                <VBox spacing="5" styleClass="permission-group">
+                    <Label text="Role Management" styleClass="permission-group-title"/>
+                    <CheckBox fx:id="permRoleView" text="View roles"/>
+                    <CheckBox fx:id="permRoleCreate" text="Create roles"/>
+                    <CheckBox fx:id="permRoleEdit" text="Edit roles"/>
+                    <CheckBox fx:id="permRoleDelete" text="Delete roles"/>
+                    <CheckBox fx:id="permRoleAssign" text="Assign roles to users"/>
+                </VBox>
+
+                <!-- Message Permissions -->
+                <VBox spacing="5" styleClass="permission-group">
+                    <Label text="Message Management" styleClass="permission-group-title"/>
+                    <CheckBox fx:id="permMessageView" text="View messages"/>
+                    <CheckBox fx:id="permMessageDelete" text="Delete messages"/>
+                    <CheckBox fx:id="permMessageModerate" text="Moderate content"/>
+                </VBox>
+
+                <!-- Admin Permissions -->
+                <VBox spacing="5" styleClass="permission-group">
+                    <Label text="Administration" styleClass="permission-group-title"/>
+                    <CheckBox fx:id="permAdminDashboard" text="Access admin dashboard"/>
+                    <CheckBox fx:id="permAdminConfig" text="Manage system config"/>
+                    <CheckBox fx:id="permAdminSecurity" text="Manage security policy"/>
+                    <CheckBox fx:id="permAdminNetwork" text="Manage network config"/>
+                    <CheckBox fx:id="permAdminAudit" text="View audit logs"/>
+                    <CheckBox fx:id="permAdminBackup" text="Manage backups"/>
+                </VBox>
+            </VBox>
+        </ScrollPane>
+
+        <HBox spacing="10" alignment="CENTER_RIGHT">
+            <Button fx:id="savePermissionsBtn" text="Save Permissions" onAction="#handleSavePermissions"
+                    styleClass="btn-primary" disable="true"/>
+        </HBox>
+    </VBox>
+
+</HBox>

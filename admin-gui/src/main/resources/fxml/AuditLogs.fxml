@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.control.cell.PropertyValueFactory?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.heronix.admin.controller.AuditLogsController"
+      spacing="20" styleClass="content-view">
+
+    <!-- Filters Toolbar -->
+    <HBox spacing="15" alignment="CENTER_LEFT" styleClass="toolbar">
+        <VBox spacing="3">
+            <Label text="Action" styleClass="filter-label"/>
+            <ComboBox fx:id="actionFilter" prefWidth="150" styleClass="combo-dark"/>
+        </VBox>
+
+        <VBox spacing="3">
+            <Label text="Entity Type" styleClass="filter-label"/>
+            <ComboBox fx:id="entityTypeFilter" prefWidth="150" styleClass="combo-dark"/>
+        </VBox>
+
+        <VBox spacing="3">
+            <Label text="Username" styleClass="filter-label"/>
+            <TextField fx:id="usernameFilter" promptText="Filter by user..." prefWidth="150"
+                       styleClass="text-field-dark"/>
+        </VBox>
+
+        <VBox spacing="3">
+            <Label text="From Date" styleClass="filter-label"/>
+            <DatePicker fx:id="fromDatePicker" prefWidth="140" styleClass="date-picker-dark"/>
+        </VBox>
+
+        <VBox spacing="3">
+            <Label text="To Date" styleClass="filter-label"/>
+            <DatePicker fx:id="toDatePicker" prefWidth="140" styleClass="date-picker-dark"/>
+        </VBox>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <Button text="Apply Filters" onAction="#handleApplyFilters" styleClass="btn-primary"/>
+        <Button text="Clear Filters" onAction="#handleClearFilters" styleClass="btn-secondary"/>
+        <Button text="Export" onAction="#handleExport" styleClass="btn-secondary">
+            <graphic>
+                <Label text="📥" styleClass="btn-icon"/>
+            </graphic>
+        </Button>
+    </HBox>
+
+    <!-- Audit Log Table -->
+    <TableView fx:id="auditTable" VBox.vgrow="ALWAYS" styleClass="table-dark">
+        <columns>
+            <TableColumn fx:id="timestampColumn" text="Timestamp" prefWidth="160">
+                <cellValueFactory><PropertyValueFactory property="timestamp"/></cellValueFactory>
+            </TableColumn>
+            <TableColumn fx:id="actionColumn" text="Action" prefWidth="120">
+                <cellValueFactory><PropertyValueFactory property="action"/></cellValueFactory>
+            </TableColumn>
+            <TableColumn fx:id="entityTypeColumn" text="Entity" prefWidth="100">
+                <cellValueFactory><PropertyValueFactory property="entityType"/></cellValueFactory>
+            </TableColumn>
+            <TableColumn fx:id="entityIdColumn" text="Entity ID" prefWidth="80">
+                <cellValueFactory><PropertyValueFactory property="entityId"/></cellValueFactory>
+            </TableColumn>
+            <TableColumn fx:id="usernameColumn" text="User" prefWidth="120">
+                <cellValueFactory><PropertyValueFactory property="username"/></cellValueFactory>
+            </TableColumn>
+            <TableColumn fx:id="ipAddressColumn" text="IP Address" prefWidth="130">
+                <cellValueFactory><PropertyValueFactory property="ipAddress"/></cellValueFactory>
+            </TableColumn>
+            <TableColumn fx:id="detailsColumn" text="Details" prefWidth="300">
+                <cellValueFactory><PropertyValueFactory property="details"/></cellValueFactory>
+            </TableColumn>
+        </columns>
+
+        <placeholder>
+            <Label text="No audit logs found" styleClass="table-placeholder"/>
+        </placeholder>
+    </TableView>
+
+    <!-- Pagination and Info -->
+    <HBox spacing="15" alignment="CENTER">
+        <Label fx:id="logCountLabel" text="0 entries"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <HBox spacing="10" alignment="CENTER">
+            <Label text="Page size:"/>
+            <ComboBox fx:id="pageSizeCombo" styleClass="combo-dark"/>
+        </HBox>
+
+        <HBox spacing="5" alignment="CENTER">
+            <Button fx:id="prevPageBtn" text="←" onAction="#handlePrevPage" styleClass="btn-small"/>
+            <Label fx:id="pageLabel" text="Page 1 of 1"/>
+            <Button fx:id="nextPageBtn" text="→" onAction="#handleNextPage" styleClass="btn-small"/>
+        </HBox>
+    </HBox>
+
+</VBox>

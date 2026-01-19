@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.control.cell.PropertyValueFactory?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.heronix.admin.controller.SystemConfigController"
+      spacing="20" styleClass="content-view">
+
+    <!-- Toolbar -->
+    <HBox spacing="15" alignment="CENTER_LEFT" styleClass="toolbar">
+        <TextField fx:id="searchField" promptText="Search configurations..." prefWidth="300"
+                   styleClass="text-field-dark"/>
+        <Button text="Search" onAction="#handleSearch" styleClass="btn-secondary"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <ComboBox fx:id="categoryFilter" promptText="Category" prefWidth="150" styleClass="combo-dark"/>
+
+        <Button text="Add Config" onAction="#handleAddConfig" styleClass="btn-primary">
+            <graphic>
+                <Label text="+" styleClass="btn-icon"/>
+            </graphic>
+        </Button>
+    </HBox>
+
+    <!-- Configuration Table -->
+    <TableView fx:id="configTable" VBox.vgrow="ALWAYS" styleClass="table-dark">
+        <columns>
+            <TableColumn fx:id="keyColumn" text="Key" prefWidth="200">
+                <cellValueFactory><PropertyValueFactory property="configKey"/></cellValueFactory>
+            </TableColumn>
+            <TableColumn fx:id="valueColumn" text="Value" prefWidth="300">
+                <cellValueFactory><PropertyValueFactory property="configValue"/></cellValueFactory>
+            </TableColumn>
+            <TableColumn fx:id="categoryColumn" text="Category" prefWidth="120">
+                <cellValueFactory><PropertyValueFactory property="category"/></cellValueFactory>
+            </TableColumn>
+            <TableColumn fx:id="descriptionColumn" text="Description" prefWidth="250">
+                <cellValueFactory><PropertyValueFactory property="description"/></cellValueFactory>
+            </TableColumn>
+            <TableColumn fx:id="encryptedColumn" text="Encrypted" prefWidth="80"/>
+            <TableColumn fx:id="actionsColumn" text="Actions" prefWidth="150"/>
+        </columns>
+
+        <placeholder>
+            <Label text="No configurations found" styleClass="table-placeholder"/>
+        </placeholder>
+    </TableView>
+
+    <!-- Info Panel -->
+    <HBox spacing="15" alignment="CENTER_LEFT" styleClass="info-bar">
+        <Label fx:id="configCountLabel" text="0 configurations"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label text="Note: Some configuration changes require a server restart" styleClass="hint-label"/>
+    </HBox>
+
+</VBox>

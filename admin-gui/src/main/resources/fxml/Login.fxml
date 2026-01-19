@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.heronix.admin.controller.LoginController"
+            styleClass="login-root">
+
+    <center>
+        <VBox alignment="CENTER" spacing="20" styleClass="login-container">
+            <padding>
+                <Insets bottom="40" left="40" right="40" top="40"/>
+            </padding>
+
+            <!-- Logo and Title -->
+            <VBox alignment="CENTER" spacing="10">
+                <ImageView fitHeight="80" fitWidth="80" preserveRatio="true">
+                    <Image url="@/images/logo.png"/>
+                </ImageView>
+                <Text text="Heronix Talk" styleClass="app-title"/>
+                <Text text="Admin Control Panel" styleClass="app-subtitle"/>
+            </VBox>
+
+            <!-- Login Form -->
+            <VBox spacing="15" styleClass="login-form">
+                <VBox spacing="5">
+                    <Label text="Server URL" styleClass="field-label"/>
+                    <TextField fx:id="serverUrlField" promptText="http://localhost:9680"
+                               styleClass="text-field-dark"/>
+                </VBox>
+
+                <VBox spacing="5">
+                    <Label text="Username" styleClass="field-label"/>
+                    <TextField fx:id="usernameField" promptText="Enter username"
+                               styleClass="text-field-dark"/>
+                </VBox>
+
+                <VBox spacing="5">
+                    <Label text="Password" styleClass="field-label"/>
+                    <PasswordField fx:id="passwordField" promptText="Enter password"
+                                   styleClass="text-field-dark" onAction="#handleLogin"/>
+                </VBox>
+
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <CheckBox fx:id="rememberMeCheckbox" text="Remember me" styleClass="checkbox-dark"/>
+                </HBox>
+
+                <!-- Error Message -->
+                <Label fx:id="errorLabel" styleClass="error-label" visible="false" managed="false"
+                       wrapText="true"/>
+
+                <!-- Login Button -->
+                <Button fx:id="loginButton" text="Sign In" onAction="#handleLogin"
+                        styleClass="btn-primary" maxWidth="Infinity"/>
+
+                <!-- Loading Indicator -->
+                <HBox fx:id="loadingBox" alignment="CENTER" spacing="10" visible="false" managed="false">
+                    <ProgressIndicator prefWidth="20" prefHeight="20"/>
+                    <Label text="Authenticating..." styleClass="loading-label"/>
+                </HBox>
+            </VBox>
+
+            <!-- Footer -->
+            <VBox alignment="CENTER" spacing="5" styleClass="login-footer">
+                <Text text="Version 1.0.0" styleClass="version-text"/>
+                <Text text="© 2024 Heronix Corporation" styleClass="copyright-text"/>
+            </VBox>
+        </VBox>
+    </center>
+
+</BorderPane>

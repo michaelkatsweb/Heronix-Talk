@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<ScrollPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.heronix.admin.controller.NetworkConfigController"
+            fitToWidth="true" styleClass="scroll-pane-dark">
+
+    <VBox spacing="20" styleClass="content-view">
+        <padding>
+            <Insets bottom="20" left="20" right="20" top="20"/>
+        </padding>
+
+        <!-- Server Settings -->
+        <VBox styleClass="panel">
+            <Label text="Server Settings" styleClass="panel-title"/>
+            <VBox spacing="15" styleClass="panel-content">
+                <HBox spacing="20" alignment="CENTER_LEFT">
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="Server Host" styleClass="field-label"/>
+                        <TextField fx:id="serverHostField" promptText="0.0.0.0" styleClass="text-field-dark"/>
+                    </VBox>
+                    <VBox spacing="5" prefWidth="150">
+                        <Label text="Server Port" styleClass="field-label"/>
+                        <Spinner fx:id="serverPortSpinner" editable="true"/>
+                    </VBox>
+                </HBox>
+
+                <Separator/>
+
+                <CheckBox fx:id="sslEnabledCheckbox" text="Enable SSL/TLS"/>
+                <VBox fx:id="sslConfigBox" spacing="10" visible="false" managed="false">
+                    <Label text="SSL Keystore Path" styleClass="field-label"/>
+                    <HBox spacing="10">
+                        <TextField fx:id="sslKeystorePathField" HBox.hgrow="ALWAYS" styleClass="text-field-dark"/>
+                        <Button text="Browse..." onAction="#handleBrowseKeystore" styleClass="btn-secondary"/>
+                    </HBox>
+                </VBox>
+            </VBox>
+        </VBox>
+
+        <!-- WebSocket Settings -->
+        <VBox styleClass="panel">
+            <Label text="WebSocket Settings" styleClass="panel-title"/>
+            <VBox spacing="15" styleClass="panel-content">
+                <HBox spacing="20" alignment="CENTER_LEFT">
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="WebSocket Port" styleClass="field-label"/>
+                        <Spinner fx:id="websocketPortSpinner" editable="true" prefWidth="150"/>
+                    </VBox>
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="Max Connections" styleClass="field-label"/>
+                        <Spinner fx:id="websocketMaxConnectionsSpinner" editable="true" prefWidth="150"/>
+                    </VBox>
+                </HBox>
+
+                <HBox spacing="20" alignment="CENTER_LEFT">
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="Heartbeat Interval (seconds)" styleClass="field-label"/>
+                        <Spinner fx:id="websocketHeartbeatSpinner" editable="true" prefWidth="150"/>
+                    </VBox>
+                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                        <Label text="Max Message Size (KB)" styleClass="field-label"/>
+                        <Spinner fx:id="websocketMaxSizeSpinner" editable="true" prefWidth="150"/>
+                    </VBox>
+                </HBox>
+            </VBox>
+        </VBox>
+
+        <!-- Proxy Settings -->
+        <VBox styleClass="panel">
+            <Label text="Proxy Settings" styleClass="panel-title"/>
+            <VBox spacing="15" styleClass="panel-content">
+                <CheckBox fx:id="proxyEnabledCheckbox" text="Enable Proxy"/>
+                <VBox fx:id="proxyConfigBox" spacing="10" visible="false" managed="false">
+                    <HBox spacing="20" alignment="CENTER_LEFT">
+                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="Proxy Host" styleClass="field-label"/>
+                            <TextField fx:id="proxyHostField" styleClass="text-field-dark"/>
+                        </VBox>
+                        <VBox spacing="5" prefWidth="150">
+                            <Label text="Proxy Port" styleClass="field-label"/>
+                            <Spinner fx:id="proxyPortSpinner" editable="true"/>
+                        </VBox>
+                    </HBox>
+                    <VBox spacing="5">
+                        <Label text="Proxy Username (optional)" styleClass="field-label"/>
+                        <TextField fx:id="proxyUsernameField" styleClass="text-field-dark"/>
+                    </VBox>
+                </VBox>
+            </VBox>
+        </VBox>
+
+        <!-- CORS Settings -->
+        <VBox styleClass="panel">
+            <Label text="CORS Settings" styleClass="panel-title"/>
+            <VBox spacing="15" styleClass="panel-content">
+                <CheckBox fx:id="corsEnabledCheckbox" text="Enable CORS"/>
+                <VBox fx:id="corsConfigBox" spacing="10" visible="false" managed="false">
+                    <VBox spacing="5">
+                        <Label text="Allowed Origins" styleClass="field-label"/>
+                        <TextField fx:id="corsAllowedOriginsField" promptText="*, or comma-separated URLs"
+                                   styleClass="text-field-dark"/>
+                        <Label text="Use * for all origins, or specify comma-separated URLs" styleClass="field-hint"/>
+                    </VBox>
+                    <VBox spacing="5">
+                        <Label text="Allowed Methods" styleClass="field-label"/>
+                        <TextField fx:id="corsAllowedMethodsField" promptText="GET, POST, PUT, DELETE"
+                                   styleClass="text-field-dark"/>
+                    </VBox>
+                    <VBox spacing="5">
+                        <Label text="Allowed Headers" styleClass="field-label"/>
+                        <TextField fx:id="corsAllowedHeadersField" promptText="*" styleClass="text-field-dark"/>
+                    </VBox>
+                </VBox>
+            </VBox>
+        </VBox>
+
+        <!-- Rate Limiting -->
+        <VBox styleClass="panel">
+            <Label text="Rate Limiting" styleClass="panel-title"/>
+            <VBox spacing="15" styleClass="panel-content">
+                <CheckBox fx:id="rateLimitEnabledCheckbox" text="Enable Rate Limiting"/>
+                <VBox fx:id="rateLimitConfigBox" spacing="10" visible="false" managed="false">
+                    <HBox spacing="20" alignment="CENTER_LEFT">
+                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="Requests per Minute" styleClass="field-label"/>
+                            <Spinner fx:id="rateLimitRequestsSpinner" editable="true" prefWidth="150"/>
+                        </VBox>
+                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                            <Label text="Burst Size" styleClass="field-label"/>
+                            <Spinner fx:id="rateLimitBurstSpinner" editable="true" prefWidth="150"/>
+                        </VBox>
+                    </HBox>
+                </VBox>
+            </VBox>
+        </VBox>
+
+        <!-- Action Buttons -->
+        <HBox spacing="15" alignment="CENTER_RIGHT">
+            <Button text="Reset to Defaults" onAction="#handleResetDefaults" styleClass="btn-secondary"/>
+            <Button text="Save Changes" onAction="#handleSave" styleClass="btn-primary"/>
+        </HBox>
+
+    </VBox>
+</ScrollPane>
