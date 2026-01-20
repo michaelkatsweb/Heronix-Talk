@@ -90,3 +90,4 @@ application-local.properties
 # Test output
 test-output/
 surefire-reports/
+nul
