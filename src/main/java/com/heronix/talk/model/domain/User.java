@@ -23,7 +23,10 @@ import java.util.Set;
         @Index(name = "idx_user_email", columnList = "email", unique = true),
         @Index(name = "idx_user_username", columnList = "username", unique = true)
 })
-@Data
+@Getter
+@Setter
+@ToString(exclude = "channels")
+@EqualsAndHashCode(of = "id")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

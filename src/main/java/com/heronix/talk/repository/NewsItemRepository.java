@@ -21,21 +21,21 @@ public interface NewsItemRepository extends JpaRepository<NewsItem, Long> {
 
     List<NewsItem> findByActiveTrue();
 
-    @Query("SELECT n FROM NewsItem n WHERE n.active = true AND (n.expiresAt IS NULL OR n.expiresAt > :now) ORDER BY n.priority DESC, n.publishedAt DESC")
+    @Query("SELECT n FROM NewsItem n LEFT JOIN FETCH n.author WHERE n.active = true AND (n.expiresAt IS NULL OR n.expiresAt > :now) ORDER BY n.priority DESC, n.publishedAt DESC")
     List<NewsItem> findVisibleNews(@Param("now") LocalDateTime now);
 
-    @Query("SELECT n FROM NewsItem n WHERE n.active = true AND (n.expiresAt IS NULL OR n.expiresAt > :now) ORDER BY n.priority DESC, n.publishedAt DESC")
+    @Query("SELECT n FROM NewsItem n LEFT JOIN FETCH n.author WHERE n.active = true AND (n.expiresAt IS NULL OR n.expiresAt > :now) ORDER BY n.priority DESC, n.publishedAt DESC")
     Page<NewsItem> findVisibleNewsPaged(@Param("now") LocalDateTime now, Pageable pageable);
 
-    @Query("SELECT n FROM NewsItem n WHERE n.pinned = true AND n.active = true AND (n.expiresAt IS NULL OR n.expiresAt > :now) ORDER BY n.publishedAt DESC")
+    @Query("SELECT n FROM NewsItem n LEFT JOIN FETCH n.author WHERE n.pinned = true AND n.active = true AND (n.expiresAt IS NULL OR n.expiresAt > :now) ORDER BY n.publishedAt DESC")
     List<NewsItem> findPinnedNews(@Param("now") LocalDateTime now);
 
-    @Query("SELECT n FROM NewsItem n WHERE n.urgent = true AND n.active = true AND (n.expiresAt IS NULL OR n.expiresAt > :now) ORDER BY n.publishedAt DESC")
+    @Query("SELECT n FROM NewsItem n LEFT JOIN FETCH n.author WHERE n.urgent = true AND n.active = true AND (n.expiresAt IS NULL OR n.expiresAt > :now) ORDER BY n.publishedAt DESC")
     List<NewsItem> findUrgentNews(@Param("now") LocalDateTime now);
 
     List<NewsItem> findByCategory(String category);
 
-    @Query("SELECT n FROM NewsItem n WHERE n.category = :category AND n.active = true AND (n.expiresAt IS NULL OR n.expiresAt > :now)")
+    @Query("SELECT n FROM NewsItem n LEFT JOIN FETCH n.author WHERE n.category = :category AND n.active = true AND (n.expiresAt IS NULL OR n.expiresAt > :now)")
     List<NewsItem> findVisibleByCategory(@Param("category") String category, @Param("now") LocalDateTime now);
 
     List<NewsItem> findByAuthorId(Long authorId);

@@ -111,7 +111,7 @@ public class ChannelService {
             }
         }
 
-        savedChannel.updateMemberCount();
+        savedChannel.setMemberCount((int) membershipRepository.countByChannelIdAndActiveTrue(savedChannel.getId()));
         return channelRepository.save(savedChannel);
     }
 
@@ -155,8 +155,8 @@ public class ChannelService {
                 .build();
 
         membershipRepository.save(membership);
-        channel.getMembers().add(user);
-        user.getChannels().add(channel);
+        // Note: We don't directly manipulate the channel.members or user.channels collections
+        // as the relationship is managed through ChannelMembership entity
 
         log.info("User {} added to channel {}", user.getUsername(), channel.getName());
     }

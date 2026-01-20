@@ -20,7 +20,10 @@ import java.util.Set;
         @Index(name = "idx_channel_name", columnList = "name"),
         @Index(name = "idx_channel_type", columnList = "channelType")
 })
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"members", "messages", "creator"})
+@EqualsAndHashCode(of = "id")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
