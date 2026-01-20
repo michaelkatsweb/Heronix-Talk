@@ -222,4 +222,32 @@ public class ChannelService {
     public long getMemberCount(Long channelId) {
         return membershipRepository.countByChannelIdAndActiveTrue(channelId);
     }
+
+    /**
+     * Auto-join user to all public and announcement channels.
+     * Called during login to ensure users have access to universal channels.
+     */
+    @Transactional
+    public void autoJoinPublicChannels(User user) {
+        List<Channel> publicChannels = channelRepository.findByChannelTypeAndActiveTrue(ChannelType.PUBLIC);
+        List<Channel> announcementChannels = channelRepository.findByChannelTypeAndActiveTrue(ChannelType.ANNOUNCEMENT);
+
+        int joined = 0;
+        for (Channel channel : publicChannels) {
+            if (!membershipRepository.existsByUserIdAndChannelIdAndActiveTrue(user.getId(), channel.getId())) {
+                addMember(channel, user, false, false);
+                joined++;
+            }
+        }
+        for (Channel channel : announcementChannels) {
+            if (!membershipRepository.existsByUserIdAndChannelIdAndActiveTrue(user.getId(), channel.getId())) {
+                addMember(channel, user, false, false);
+                joined++;
+            }
+        }
+
+        if (joined > 0) {
+            log.info("Auto-joined user {} to {} public/announcement channels", user.getUsername(), joined);
+        }
+    }
 }

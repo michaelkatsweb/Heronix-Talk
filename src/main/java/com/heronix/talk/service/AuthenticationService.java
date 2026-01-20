@@ -28,6 +28,7 @@ public class AuthenticationService {
     private final UserRepository userRepository;
     private final UserSessionRepository sessionRepository;
     private final UserService userService;
+    private final ChannelService channelService;
 
     @Value("${heronix.session.timeout-hours:24}")
     private int sessionTimeoutHours;
@@ -86,6 +87,9 @@ public class AuthenticationService {
         user.setStatus(UserStatus.ONLINE);
         user.setLastActivity(LocalDateTime.now());
         userRepository.save(user);
+
+        // Auto-join public and announcement channels
+        channelService.autoJoinPublicChannels(user);
 
         log.info("User {} authenticated successfully", user.getUsername());
 
