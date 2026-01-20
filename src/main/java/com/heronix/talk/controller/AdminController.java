@@ -33,6 +33,7 @@ public class AdminController {
     private final AuthenticationService authenticationService;
     private final UserService userService;
     private final SisSyncService sisSyncService;
+    private final SisDirectDbSyncService sisDirectDbSyncService;
     private final UserImportService userImportService;
 
     // ==================== Dashboard ====================
@@ -353,6 +354,61 @@ public class AdminController {
             ));
         });
     }
+
+    // ==================== SIS Direct Database Sync ====================
+
+    @GetMapping("/sis/db/status")
+    public ResponseEntity<SisDirectDbSyncService.DbSyncStatusDTO> getSisDbStatus(
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
+                return ResponseEntity.status(403).build();
+            }
+            return ResponseEntity.ok(sisDirectDbSyncService.getStatus());
+        });
+    }
+
+    @PostMapping("/sis/db/sync")
+    public ResponseEntity<ImportResultDTO> triggerSisDbSync(
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
+                return ResponseEntity.status(403).build();
+            }
+            ImportResultDTO result = sisDirectDbSyncService.syncFromDatabase();
+            return ResponseEntity.ok(result);
+        });
+    }
+
+    @PostMapping("/sis/db/test-connection")
+    public ResponseEntity<Map<String, Object>> testSisDbConnection(
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
+                return ResponseEntity.status(403).build();
+            }
+            boolean connected = sisDirectDbSyncService.testConnection();
+            return ResponseEntity.ok(Map.of(
+                    "connected", connected,
+                    "timestamp", LocalDateTime.now().toString()
+            ));
+        });
+    }
+
+    @PostMapping("/sis/db/sync/custom")
+    public ResponseEntity<ImportResultDTO> triggerSisDbSyncWithConfig(
+            @RequestBody SisDirectDbSyncService.DatabaseConfig config,
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
+                return ResponseEntity.status(403).build();
+            }
+            ImportResultDTO result = sisDirectDbSyncService.syncFromDatabase(config);
+            return ResponseEntity.ok(result);
+        });
+    }
+
+    // ==================== User Import ====================
 
     @PostMapping(value = "/users/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ImportResultDTO> importUsersFromFile(

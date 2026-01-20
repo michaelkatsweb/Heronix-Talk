@@ -1,432 +1,333 @@
 package com.heronix.talk.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.heronix.talk.config.SisIntegrationProperties;
 import com.heronix.talk.model.domain.User;
+import com.heronix.talk.model.dto.ImportResultDTO;
+import com.heronix.talk.model.dto.SisUserDTO;
 import com.heronix.talk.model.enums.SyncStatus;
 import com.heronix.talk.model.enums.UserRole;
 import com.heronix.talk.repository.UserRepository;
-import jakarta.annotation.PostConstruct;
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.*;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * SIS (Student Information System) Sync Service
- *
- * Synchronizes teacher/staff accounts from the EduScheduler-Pro database
- * to Heronix-Talk, enabling users to login with their SIS credentials.
- *
- * This is a direct database sync approach - Talk connects to the SIS database
- * and pulls teacher records, including their password hashes.
+ * Service for synchronizing users from the SIS (Student Information System) via REST API.
  */
 @Service
+@RequiredArgsConstructor
 @Slf4j
-public class SISSyncService {
+public class SisSyncService {
 
+    private final SisIntegrationProperties sisProperties;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final ObjectMapper objectMapper;
+    private final AuditService auditService;
 
-    @Value("${heronix.sis.sync.enabled:false}")
-    private boolean sisEnabled;
-
-    @Value("${heronix.sis.db.url:}")
-    private String sisDbUrl;
-
-    @Value("${heronix.sis.db.username:sa}")
-    private String sisDbUsername;
-
-    @Value("${heronix.sis.db.password:}")
-    private String sisDbPassword;
-
-    @Value("${heronix.sis.db.driver:org.h2.Driver}")
-    private String sisDbDriver;
-
-    public SISSyncService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
-
-    @PostConstruct
-    public void init() {
-        if (sisEnabled && !sisDbUrl.isEmpty()) {
-            log.info("SIS Sync enabled - will sync from: {}", sisDbUrl);
-            // Run initial sync on startup
-            syncFromSIS();
-        } else {
-            log.info("SIS Sync disabled or not configured");
-        }
-    }
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
 
     /**
-     * Scheduled sync from SIS database
-     * Runs every 5 minutes by default (configurable)
+     * Scheduled sync task - runs if automatic sync is enabled.
      */
-    @Scheduled(fixedRateString = "${heronix.sis.sync.interval-seconds:300}000")
+    @Scheduled(fixedDelayString = "${heronix.sis.sync.interval-seconds:300}000")
     public void scheduledSync() {
-        if (sisEnabled && !sisDbUrl.isEmpty()) {
-            syncFromSIS();
+        if (!sisProperties.getSync().isEnabled() || !sisProperties.getApi().isEnabled()) {
+            return;
+        }
+
+        log.debug("Running scheduled SIS sync...");
+        try {
+            ImportResultDTO result = syncFromApi();
+            if (result.isSuccess() && result.getTotalProcessed() > 0) {
+                log.info("Scheduled SIS sync completed: {} processed, {} created, {} updated",
+                        result.getTotalProcessed(), result.getCreated(), result.getUpdated());
+            }
+        } catch (Exception e) {
+            log.error("Scheduled SIS sync failed", e);
         }
     }
 
     /**
-     * Manually trigger a sync from SIS
+     * Manually trigger a sync from the SIS API.
      */
-    @Transactional
-    public SyncResult syncFromSIS() {
-        SyncResult result = new SyncResult();
-        result.setStartTime(LocalDateTime.now());
+    public ImportResultDTO syncFromApi() {
+        long startTime = System.currentTimeMillis();
+        String source = "SIS API: " + sisProperties.getApi().getBaseUrl();
 
-        if (!sisEnabled || sisDbUrl.isEmpty()) {
-            result.setSuccess(false);
-            result.setMessage("SIS sync is not enabled or configured");
-            return result;
+        if (!sisProperties.getApi().isEnabled()) {
+            return ImportResultDTO.createError(source, "SIS API sync is disabled");
         }
-
-        log.info("Starting SIS sync from: {}", sisDbUrl);
 
         try {
-            // Load the database driver
-            Class.forName(sisDbDriver);
+            List<SisUserDTO> users = fetchUsersFromApi();
+            ImportResultDTO result = processUsers(users, source);
+            result.setDurationMs(System.currentTimeMillis() - startTime);
+            result.setSuccess(result.getErrors() == 0);
 
-            // Connect to SIS database
-            try (Connection conn = DriverManager.getConnection(sisDbUrl, sisDbUsername, sisDbPassword)) {
+            auditService.logAdminAction(null, "SIS_SYNC",
+                    String.format("API sync completed: %d processed, %d created, %d updated, %d errors",
+                            result.getTotalProcessed(), result.getCreated(),
+                            result.getUpdated(), result.getErrors()));
 
-                // Query teachers from SIS
-                List<SISTeacher> teachers = fetchTeachersFromSIS(conn);
-                log.info("Found {} teachers in SIS database", teachers.size());
+            return result;
+        } catch (Exception e) {
+            log.error("Failed to sync from SIS API", e);
+            return ImportResultDTO.createError(source, "API sync failed: " + e.getMessage());
+        }
+    }
 
-                // Sync each teacher
-                for (SISTeacher teacher : teachers) {
-                    try {
-                        syncTeacher(teacher);
-                        result.setUsersProcessed(result.getUsersProcessed() + 1);
-                    } catch (Exception e) {
-                        log.error("Error syncing teacher {}: {}", teacher.getEmployeeId(), e.getMessage());
-                        result.setErrors(result.getErrors() + 1);
-                    }
-                }
+    /**
+     * Fetch users from the SIS API.
+     */
+    private List<SisUserDTO> fetchUsersFromApi() throws Exception {
+        String url = sisProperties.getApi().getBaseUrl() + sisProperties.getApi().getEndpoint();
 
-                result.setSuccess(true);
-                result.setMessage(String.format("Synced %d teachers, %d errors",
-                        result.getUsersProcessed(), result.getErrors()));
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(sisProperties.getApi().getTimeoutSeconds()))
+                .GET();
 
-            }
-        } catch (ClassNotFoundException e) {
-            log.error("SIS database driver not found: {}", sisDbDriver);
-            result.setSuccess(false);
-            result.setMessage("Database driver not found: " + sisDbDriver);
-        } catch (SQLException e) {
-            log.error("Error connecting to SIS database: {}", e.getMessage());
-            result.setSuccess(false);
-            result.setMessage("Database connection error: " + e.getMessage());
+        // Add authorization token if configured
+        String token = sisProperties.getApi().getToken();
+        if (token != null && !token.isBlank()) {
+            requestBuilder.header("Authorization", "Bearer " + token);
         }
 
-        result.setEndTime(LocalDateTime.now());
-        log.info("SIS sync completed: {}", result.getMessage());
+        HttpRequest request = requestBuilder.build();
+        log.debug("Fetching users from SIS API: {}", url);
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("SIS API returned status " + response.statusCode() + ": " + response.body());
+        }
+
+        return objectMapper.readValue(response.body(), new TypeReference<List<SisUserDTO>>() {});
+    }
+
+    /**
+     * Process a list of SIS users and sync them to the local database.
+     */
+    @Transactional
+    public ImportResultDTO processUsers(List<SisUserDTO> sisUsers, String source) {
+        ImportResultDTO result = ImportResultDTO.builder()
+                .source(source)
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        for (SisUserDTO sisUser : sisUsers) {
+            try {
+                // Parse full name into first/last if needed
+                sisUser.parseFullNameIfNeeded();
+
+                if (!sisUser.isValid()) {
+                    result.addWarning("Skipped invalid user: " + sisUser.getEffectiveEmployeeId());
+                    result.incrementSkipped();
+                    continue;
+                }
+
+                processUser(sisUser, result);
+            } catch (Exception e) {
+                log.error("Error processing SIS user: {}", sisUser.getEffectiveEmployeeId(), e);
+                result.addError("Failed to process user " + sisUser.getEffectiveEmployeeId() + ": " + e.getMessage());
+            }
+        }
+
         return result;
     }
 
     /**
-     * Fetch teachers from SIS database
+     * Process a single SIS user - create or update in local database.
      */
-    private List<SISTeacher> fetchTeachersFromSIS(Connection conn) throws SQLException {
-        List<SISTeacher> teachers = new ArrayList<>();
-
-        // Query the teachers table in EduScheduler-Pro
-        // Note: Adjust table/column names based on actual SIS schema
-        String sql = """
-            SELECT
-                employee_id,
-                first_name,
-                last_name,
-                email,
-                department,
-                password_hash,
-                active,
-                phone_number
-            FROM teachers
-            WHERE active = true
-            """;
-
-        try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            while (rs.next()) {
-                SISTeacher teacher = new SISTeacher();
-                teacher.setEmployeeId(rs.getString("employee_id"));
-                teacher.setFirstName(rs.getString("first_name"));
-                teacher.setLastName(rs.getString("last_name"));
-                teacher.setEmail(rs.getString("email"));
-                teacher.setDepartment(rs.getString("department"));
-                teacher.setPasswordHash(rs.getString("password_hash"));
-                teacher.setActive(rs.getBoolean("active"));
-                teacher.setPhoneNumber(rs.getString("phone_number"));
-                teachers.add(teacher);
-            }
-        } catch (SQLException e) {
-            // Table might have different structure, try alternative query
-            log.warn("Primary query failed, trying alternative schema: {}", e.getMessage());
-            return fetchTeachersAlternative(conn);
-        }
-
-        return teachers;
-    }
-
-    /**
-     * Alternative fetch method for different SIS schema
-     */
-    private List<SISTeacher> fetchTeachersAlternative(Connection conn) throws SQLException {
-        List<SISTeacher> teachers = new ArrayList<>();
-
-        // Try a more generic approach - look for common table names
-        String[] tableNames = {"teachers", "teacher", "staff", "users", "employees"};
-
-        for (String tableName : tableNames) {
-            try {
-                // Check if table exists
-                DatabaseMetaData meta = conn.getMetaData();
-                ResultSet tables = meta.getTables(null, null, tableName.toUpperCase(), null);
-
-                if (tables.next()) {
-                    log.info("Found table: {}", tableName);
-
-                    // Get column names
-                    ResultSet columns = meta.getColumns(null, null, tableName.toUpperCase(), null);
-                    List<String> columnNames = new ArrayList<>();
-                    while (columns.next()) {
-                        columnNames.add(columns.getString("COLUMN_NAME").toLowerCase());
-                    }
-                    log.debug("Columns in {}: {}", tableName, columnNames);
-
-                    // Build dynamic query based on available columns
-                    StringBuilder sql = new StringBuilder("SELECT * FROM " + tableName);
-
-                    // Add active filter if column exists
-                    if (columnNames.contains("active")) {
-                        sql.append(" WHERE active = true");
-                    }
-
-                    try (Statement stmt = conn.createStatement();
-                         ResultSet rs = stmt.executeQuery(sql.toString())) {
-
-                        while (rs.next()) {
-                            SISTeacher teacher = mapResultSetToTeacher(rs, columnNames);
-                            if (teacher.getEmployeeId() != null) {
-                                teachers.add(teacher);
-                            }
-                        }
-                    }
-
-                    if (!teachers.isEmpty()) {
-                        log.info("Successfully fetched {} records from {}", teachers.size(), tableName);
-                        return teachers;
-                    }
-                }
-            } catch (SQLException e) {
-                log.debug("Table {} not accessible: {}", tableName, e.getMessage());
-            }
-        }
-
-        return teachers;
-    }
-
-    /**
-     * Map a ResultSet row to SISTeacher based on available columns
-     */
-    private SISTeacher mapResultSetToTeacher(ResultSet rs, List<String> columns) throws SQLException {
-        SISTeacher teacher = new SISTeacher();
-
-        // Employee ID (required)
-        teacher.setEmployeeId(getStringColumn(rs, columns,
-                "employee_id", "employeeid", "emp_id", "id", "teacher_id"));
-
-        // First Name
-        teacher.setFirstName(getStringColumn(rs, columns,
-                "first_name", "firstname", "fname", "given_name"));
-
-        // Last Name
-        teacher.setLastName(getStringColumn(rs, columns,
-                "last_name", "lastname", "lname", "surname", "family_name"));
-
-        // Email
-        teacher.setEmail(getStringColumn(rs, columns,
-                "email", "email_address", "mail"));
-
-        // Department
-        teacher.setDepartment(getStringColumn(rs, columns,
-                "department", "dept", "subject", "subject_area"));
-
-        // Password Hash
-        teacher.setPasswordHash(getStringColumn(rs, columns,
-                "password_hash", "passwordhash", "password", "pwd_hash"));
-
-        // Phone
-        teacher.setPhoneNumber(getStringColumn(rs, columns,
-                "phone_number", "phone", "phonenumber", "mobile"));
-
-        // Active status
-        teacher.setActive(getBooleanColumn(rs, columns, "active", true));
-
-        return teacher;
-    }
-
-    private String getStringColumn(ResultSet rs, List<String> columns, String... possibleNames) {
-        for (String name : possibleNames) {
-            if (columns.contains(name.toLowerCase())) {
-                try {
-                    return rs.getString(name);
-                } catch (SQLException e) {
-                    // Try next name
-                }
-            }
-        }
-        return null;
-    }
-
-    private boolean getBooleanColumn(ResultSet rs, List<String> columns, String name, boolean defaultValue) {
-        if (columns.contains(name.toLowerCase())) {
-            try {
-                return rs.getBoolean(name);
-            } catch (SQLException e) {
-                return defaultValue;
-            }
-        }
-        return defaultValue;
-    }
-
-    /**
-     * Sync a single teacher to the local database
-     */
-    @Transactional
-    public User syncTeacher(SISTeacher sisTeacher) {
-        if (sisTeacher.getEmployeeId() == null || sisTeacher.getEmployeeId().isBlank()) {
-            throw new IllegalArgumentException("Employee ID is required");
-        }
-
-        Optional<User> existingUser = userRepository.findByEmployeeId(sisTeacher.getEmployeeId());
+    private void processUser(SisUserDTO sisUser, ImportResultDTO result) {
+        String effectiveEmployeeId = sisUser.getEffectiveEmployeeId();
+        Optional<User> existingUser = userRepository.findByEmployeeId(effectiveEmployeeId);
 
         if (existingUser.isPresent()) {
-            // Update existing user
-            User user = existingUser.get();
-            updateUserFromSIS(user, sisTeacher);
-            log.debug("Updated user from SIS: {}", sisTeacher.getEmployeeId());
-            return userRepository.save(user);
+            updateExistingUser(existingUser.get(), sisUser);
+            result.incrementUpdated();
+            log.debug("Updated user from SIS: {}", effectiveEmployeeId);
         } else {
-            // Create new user
-            User newUser = createUserFromSIS(sisTeacher);
-            log.info("Created new user from SIS: {}", sisTeacher.getEmployeeId());
-            return userRepository.save(newUser);
+            createNewUser(sisUser);
+            result.incrementCreated();
+            log.debug("Created user from SIS: {}", effectiveEmployeeId);
         }
     }
 
-    private void updateUserFromSIS(User user, SISTeacher sis) {
-        if (sis.getFirstName() != null) user.setFirstName(sis.getFirstName());
-        if (sis.getLastName() != null) user.setLastName(sis.getLastName());
-        if (sis.getEmail() != null) user.setEmail(sis.getEmail());
-        if (sis.getDepartment() != null) user.setDepartment(sis.getDepartment());
-        if (sis.getPhoneNumber() != null) user.setPhoneNumber(sis.getPhoneNumber());
+    /**
+     * Update an existing user with data from SIS.
+     */
+    private void updateExistingUser(User user, SisUserDTO sisUser) {
+        user.setFirstName(sisUser.getFirstName());
+        user.setLastName(sisUser.getLastName());
 
-        // Update password hash if provided (allows password sync from SIS)
-        if (sis.getPasswordHash() != null && !sis.getPasswordHash().isBlank()) {
-            user.setPasswordHash(sis.getPasswordHash());
+        if (sisUser.getEmail() != null && !sisUser.getEmail().isBlank()) {
+            user.setEmail(sisUser.getEmail());
+        }
+        if (sisUser.getDepartment() != null) {
+            user.setDepartment(sisUser.getDepartment());
+        }
+        if (sisUser.getPhoneNumber() != null) {
+            user.setPhoneNumber(sisUser.getPhoneNumber());
+        }
+        if (sisUser.getRole() != null) {
+            user.setRole(mapRole(sisUser.getRole()));
         }
 
-        user.setActive(sis.isActive());
+        user.setActive(sisUser.isActive());
         user.setSyncStatus(SyncStatus.SYNCED);
         user.setLastSyncTime(LocalDateTime.now());
-        user.setSyncSource("sis-database");
+        user.setSyncSource("SIS");
+
+        userRepository.save(user);
     }
 
-    private User createUserFromSIS(SISTeacher sis) {
-        return User.builder()
-                .username(sis.getEmployeeId().toLowerCase())
-                .employeeId(sis.getEmployeeId())
-                .firstName(sis.getFirstName() != null ? sis.getFirstName() : "Unknown")
-                .lastName(sis.getLastName() != null ? sis.getLastName() : "User")
-                .email(sis.getEmail() != null ? sis.getEmail() : sis.getEmployeeId() + "@school.edu")
-                .department(sis.getDepartment())
-                .phoneNumber(sis.getPhoneNumber())
-                .passwordHash(sis.getPasswordHash())
-                .role(UserRole.TEACHER)
-                .active(sis.isActive())
+    /**
+     * Create a new user from SIS data.
+     */
+    private void createNewUser(SisUserDTO sisUser) {
+        String username = generateUsername(sisUser);
+        String effectiveEmployeeId = sisUser.getEffectiveEmployeeId();
+
+        User user = User.builder()
+                .employeeId(effectiveEmployeeId)
+                .username(username)
+                .firstName(sisUser.getFirstName())
+                .lastName(sisUser.getLastName())
+                .email(sisUser.getEmail())
+                .department(sisUser.getDepartment() != null ? sisUser.getDepartment() : sisUser.getSubject())
+                .phoneNumber(sisUser.getPhoneNumber())
+                .role(mapRole(sisUser.getRole()))
+                .active(sisUser.isActive())
+                .passwordHash(passwordEncoder.encode(generateTemporaryPassword(sisUser, effectiveEmployeeId)))
+                .passwordChangeRequired(true)
                 .syncStatus(SyncStatus.SYNCED)
                 .lastSyncTime(LocalDateTime.now())
-                .syncSource("sis-database")
+                .syncSource("SIS")
+                .build();
+
+        userRepository.save(user);
+    }
+
+    /**
+     * Generate a username from SIS user data.
+     */
+    private String generateUsername(SisUserDTO sisUser) {
+        // Try username from SIS first
+        if (sisUser.getUsername() != null && !sisUser.getUsername().isBlank()) {
+            String username = sisUser.getUsername().toLowerCase().trim();
+            if (!userRepository.existsByUsername(username)) {
+                return username;
+            }
+        }
+
+        // Try email prefix
+        if (sisUser.getEmail() != null && sisUser.getEmail().contains("@")) {
+            String emailPrefix = sisUser.getEmail().split("@")[0].toLowerCase();
+            if (!userRepository.existsByUsername(emailPrefix)) {
+                return emailPrefix;
+            }
+        }
+
+        // Generate from name
+        String baseUsername = (sisUser.getFirstName().charAt(0) + sisUser.getLastName())
+                .toLowerCase().replaceAll("[^a-z0-9]", "");
+
+        String username = baseUsername;
+        int counter = 1;
+        while (userRepository.existsByUsername(username)) {
+            username = baseUsername + counter++;
+        }
+
+        return username;
+    }
+
+    /**
+     * Generate a temporary password for new users.
+     */
+    private String generateTemporaryPassword(SisUserDTO sisUser, String employeeId) {
+        // Use employee ID + first 3 chars of last name as temp password
+        String lastName = sisUser.getLastName() != null ? sisUser.getLastName() : "user";
+        return employeeId + lastName.substring(0, Math.min(3, lastName.length())).toLowerCase();
+    }
+
+    /**
+     * Map SIS role string to UserRole enum.
+     */
+    private UserRole mapRole(String sisRole) {
+        if (sisRole == null || sisRole.isBlank()) {
+            return UserRole.TEACHER;
+        }
+
+        return switch (sisRole.toUpperCase()) {
+            case "ADMIN", "ADMINISTRATOR" -> UserRole.ADMIN;
+            case "PRINCIPAL" -> UserRole.PRINCIPAL;
+            case "COUNSELOR" -> UserRole.COUNSELOR;
+            case "DEPARTMENT_HEAD", "DEPT_HEAD" -> UserRole.DEPARTMENT_HEAD;
+            case "STAFF" -> UserRole.STAFF;
+            default -> UserRole.TEACHER;
+        };
+    }
+
+    /**
+     * Test connection to the SIS API.
+     */
+    public boolean testConnection() {
+        try {
+            String url = sisProperties.getApi().getBaseUrl() + "/health";
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(5))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 200;
+        } catch (Exception e) {
+            log.debug("SIS API connection test failed", e);
+            return false;
+        }
+    }
+
+    /**
+     * Get current SIS sync configuration status.
+     */
+    public SisSyncStatusDTO getStatus() {
+        return SisSyncStatusDTO.builder()
+                .syncEnabled(sisProperties.getSync().isEnabled())
+                .apiEnabled(sisProperties.getApi().isEnabled())
+                .baseUrl(sisProperties.getApi().getBaseUrl())
+                .endpoint(sisProperties.getApi().getEndpoint())
+                .intervalSeconds(sisProperties.getSync().getIntervalSeconds())
+                .connectionOk(testConnection())
                 .build();
     }
 
-    /**
-     * Check if SIS sync is configured and working
-     */
-    public boolean isSISAvailable() {
-        if (!sisEnabled || sisDbUrl.isEmpty()) {
-            return false;
-        }
-
-        try {
-            Class.forName(sisDbDriver);
-            try (Connection conn = DriverManager.getConnection(sisDbUrl, sisDbUsername, sisDbPassword)) {
-                return conn.isValid(5);
-            }
-        } catch (Exception e) {
-            log.debug("SIS database not available: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Get current sync status
-     */
-    public SISSyncStatus getSyncStatus() {
-        return new SISSyncStatus();
-    }
-
-    // ==================== Inner Classes ====================
-
-    /**
-     * DTO for teacher data from SIS
-     */
-    @Data
-    public static class SISTeacher {
-        private String employeeId;
-        private String firstName;
-        private String lastName;
-        private String email;
-        private String department;
-        private String passwordHash;
-        private String phoneNumber;
-        private boolean active = true;
-    }
-
-    /**
-     * Result of a sync operation
-     */
-    @Data
-    public static class SyncResult {
-        private boolean success;
-        private String message;
-        private int usersProcessed;
-        private int usersCreated;
-        private int usersUpdated;
-        private int errors;
-        private LocalDateTime startTime;
-        private LocalDateTime endTime;
-    }
-
-    /**
-     * Current sync status
-     */
-    @Data
-    public static class SISSyncStatus {
-        private boolean enabled;
-        private boolean sisAvailable;
-        private LocalDateTime lastSyncTime;
-        private int totalSyncedUsers;
+    @lombok.Data
+    @lombok.Builder
+    public static class SisSyncStatusDTO {
+        private boolean syncEnabled;
+        private boolean apiEnabled;
+        private String baseUrl;
+        private String endpoint;
+        private int intervalSeconds;
+        private boolean connectionOk;
     }
 }

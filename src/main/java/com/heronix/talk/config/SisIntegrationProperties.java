@@ -18,6 +18,7 @@ public class SisIntegrationProperties {
     private final Sync sync = new Sync();
     private final Api api = new Api();
     private final Import importConfig = new Import();
+    private final Database database = new Database();
 
     @Getter
     @Setter
@@ -31,7 +32,7 @@ public class SisIntegrationProperties {
     public static class Api {
         private boolean enabled = true;
         private String baseUrl = "http://localhost:8080";
-        private String endpoint = "/api/staff/export";
+        private String endpoint = "/api/teachers";
         private String token = "";
         private int timeoutSeconds = 30;
     }
@@ -42,5 +43,16 @@ public class SisIntegrationProperties {
         private String directory = "./imports";
         private String processedDirectory = "./imports/processed";
         private boolean autoProcess = false;
+    }
+
+    @Getter
+    @Setter
+    public static class Database {
+        private boolean enabled = false;
+        private String url = "jdbc:h2:file:./data/heronix;AUTO_SERVER=TRUE";
+        private String username = "sa";
+        private String password = "";
+        private String driverClassName = "org.h2.Driver";
+        private String tableName = "teachers";
     }
 }
