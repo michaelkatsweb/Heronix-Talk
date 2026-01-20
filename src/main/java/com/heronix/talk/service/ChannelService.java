@@ -32,28 +32,33 @@ public class ChannelService {
     private final ChannelMembershipRepository membershipRepository;
     private final UserRepository userRepository;
 
+    @Transactional(readOnly = true)
     public Optional<Channel> findById(Long id) {
         return channelRepository.findById(id);
     }
 
+    @Transactional(readOnly = true)
     public List<ChannelDTO> getAllActiveChannels() {
         return channelRepository.findByActiveTrueOrderByLastMessageTimeDesc().stream()
                 .map(ChannelDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ChannelDTO> getPublicChannels() {
         return channelRepository.findPublicChannels().stream()
                 .map(ChannelDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ChannelDTO> getAnnouncementChannels() {
         return channelRepository.findAnnouncementChannels().stream()
                 .map(ChannelDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ChannelDTO> getUserChannels(Long userId) {
         List<Channel> channels = channelRepository.findChannelsByMemberId(userId);
         return channels.stream()
@@ -71,12 +76,14 @@ public class ChannelService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ChannelDTO> getUserDirectMessages(Long userId) {
         return channelRepository.findChannelsByMemberIdAndType(userId, ChannelType.DIRECT_MESSAGE).stream()
                 .map(ChannelDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ChannelDTO> searchChannels(String term) {
         return channelRepository.searchByName(term).stream()
                 .map(ChannelDTO::fromEntity)
@@ -209,16 +216,19 @@ public class ChannelService {
         });
     }
 
+    @Transactional(readOnly = true)
     public boolean isMember(Long channelId, Long userId) {
         return membershipRepository.existsByUserIdAndChannelIdAndActiveTrue(userId, channelId);
     }
 
+    @Transactional(readOnly = true)
     public List<Long> getChannelMemberIds(Long channelId) {
         return membershipRepository.findByChannelIdAndActiveTrue(channelId).stream()
                 .map(m -> m.getUser().getId())
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public long getMemberCount(Long channelId) {
         return membershipRepository.countByChannelIdAndActiveTrue(channelId);
     }
@@ -249,5 +259,41 @@ public class ChannelService {
         if (joined > 0) {
             log.info("Auto-joined user {} to {} public/announcement channels", user.getUsername(), joined);
         }
+    }
+
+    /**
+     * Sync all existing users to public and announcement channels.
+     * Admin action to ensure all users have access to universal channels.
+     * @return number of users processed
+     */
+    @Transactional
+    public int syncAllUsersToPublicChannels() {
+        List<User> allUsers = userRepository.findByActiveTrue();
+        List<Channel> publicChannels = channelRepository.findByChannelTypeAndActiveTrue(ChannelType.PUBLIC);
+        List<Channel> announcementChannels = channelRepository.findByChannelTypeAndActiveTrue(ChannelType.ANNOUNCEMENT);
+
+        int usersProcessed = 0;
+        for (User user : allUsers) {
+            int joined = 0;
+            for (Channel channel : publicChannels) {
+                if (!membershipRepository.existsByUserIdAndChannelIdAndActiveTrue(user.getId(), channel.getId())) {
+                    addMember(channel, user, false, false);
+                    joined++;
+                }
+            }
+            for (Channel channel : announcementChannels) {
+                if (!membershipRepository.existsByUserIdAndChannelIdAndActiveTrue(user.getId(), channel.getId())) {
+                    addMember(channel, user, false, false);
+                    joined++;
+                }
+            }
+            if (joined > 0) {
+                usersProcessed++;
+                log.debug("Added user {} to {} channels", user.getUsername(), joined);
+            }
+        }
+
+        log.info("Synced {} users to public/announcement channels", usersProcessed);
+        return usersProcessed;
     }
 }

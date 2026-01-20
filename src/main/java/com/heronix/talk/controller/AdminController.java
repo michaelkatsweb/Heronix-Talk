@@ -35,6 +35,7 @@ public class AdminController {
     private final SisSyncService sisSyncService;
     private final SisDirectDbSyncService sisDirectDbSyncService;
     private final UserImportService userImportService;
+    private final ChannelService channelService;
 
     // ==================== Dashboard ====================
 
@@ -242,6 +243,23 @@ public class AdminController {
             }
             int affected = userService.performBulkAction(request, admin);
             return ResponseEntity.ok(Map.of("affectedUsers", affected));
+        });
+    }
+
+    @PostMapping("/users/sync-channels")
+    public ResponseEntity<Map<String, Object>> syncAllUsersToPublicChannels(
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, admin -> {
+            if (!userRoleService.hasPermission(admin, "MANAGE_USERS")) {
+                return ResponseEntity.status(403).build();
+            }
+            int synced = channelService.syncAllUsersToPublicChannels();
+            auditService.logAdminAction(admin, "SYNC_CHANNELS",
+                    String.format("Synced %d users to public channels", synced));
+            return ResponseEntity.ok(Map.of(
+                    "usersProcessed", synced,
+                    "timestamp", LocalDateTime.now().toString()
+            ));
         });
     }
 
