@@ -395,19 +395,6 @@ public class AdminController {
         });
     }
 
-    @PostMapping("/sis/db/sync/custom")
-    public ResponseEntity<ImportResultDTO> triggerSisDbSyncWithConfig(
-            @RequestBody SisDirectDbSyncService.DatabaseConfig config,
-            @RequestHeader("X-Session-Token") String sessionToken) {
-        return withAdminUser(sessionToken, user -> {
-            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
-                return ResponseEntity.status(403).build();
-            }
-            ImportResultDTO result = sisDirectDbSyncService.syncFromDatabase(config);
-            return ResponseEntity.ok(result);
-        });
-    }
-
     // ==================== User Import ====================
 
     @PostMapping(value = "/users/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
