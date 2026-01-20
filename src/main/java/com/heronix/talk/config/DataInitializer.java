@@ -96,7 +96,7 @@ public class DataInitializer implements CommandLineRunner {
         if (!userRepository.existsByUsername("admin")) {
             User admin = User.builder()
                     .username("admin")
-                    .employeeId("ADMIN001")
+                    .employeeId("admin")  // Match Heronix-Teacher employeeId for testing
                     .firstName("System")
                     .lastName("Administrator")
                     .email("admin@heronix.local")
