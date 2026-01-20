@@ -222,6 +222,14 @@ public class AuditService {
     }
 
     /**
+     * Log an admin action (system-level operations like sync).
+     */
+    @Transactional
+    public void logAdminAction(User user, String actionName, String description) {
+        log(AuditCategory.ADMIN_ACTION, AuditAction.SYNC_COMPLETED, user, "ADMIN_ACTION", null, actionName, description);
+    }
+
+    /**
      * Clean up old audit logs based on retention policy.
      */
     @Transactional

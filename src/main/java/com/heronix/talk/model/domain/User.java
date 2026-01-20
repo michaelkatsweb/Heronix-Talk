@@ -177,14 +177,14 @@ public class User {
         return syncStatus == SyncStatus.PENDING || syncStatus == SyncStatus.LOCAL_ONLY;
     }
 
-    public String getRole() {
+    public String getRoleDisplayName() {
         if (roleName != null) {
             return roleName;
         }
         return role != null ? role.name() : "USER";
     }
 
-    public void setRole(String roleName) {
+    public void setRoleFromName(String roleName) {
         this.roleName = roleName;
     }
 }

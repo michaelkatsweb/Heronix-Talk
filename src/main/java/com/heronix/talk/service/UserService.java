@@ -250,8 +250,8 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        String oldRole = user.getRole();
-        user.setRole(roleName);
+        String oldRole = user.getRoleDisplayName();
+        user.setRoleFromName(roleName);
         userRepository.save(user);
 
         auditService.log(AuditCategory.USER_MANAGEMENT, AuditAction.USER_ROLE_CHANGED, admin,

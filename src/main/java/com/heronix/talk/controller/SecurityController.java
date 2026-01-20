@@ -115,7 +115,7 @@ public class SecurityController {
     private <T> ResponseEntity<T> withSecurityAdmin(String sessionToken, SecurityOperation<T> operation) {
         return authenticationService.getUserFromSession(sessionToken)
                 .filter(user -> userRoleService.hasPermission(user, "MANAGE_SECURITY_POLICY") ||
-                               "ADMIN".equalsIgnoreCase(user.getRole()))
+                               "ADMIN".equalsIgnoreCase(user.getRoleDisplayName()))
                 .map(operation::execute)
                 .orElse(ResponseEntity.status(403).build());
     }

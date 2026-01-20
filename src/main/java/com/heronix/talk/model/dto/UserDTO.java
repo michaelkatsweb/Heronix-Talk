@@ -49,7 +49,7 @@ public class UserDTO {
                 .email(user.getEmail())
                 .department(user.getDepartment())
                 .phoneNumber(user.getPhoneNumber())
-                .role(user.getRole())
+                .role(user.getRoleDisplayName())
                 .status(user.getStatus())
                 .statusMessage(user.getStatusMessage())
                 .avatarPath(user.getAvatarPath())

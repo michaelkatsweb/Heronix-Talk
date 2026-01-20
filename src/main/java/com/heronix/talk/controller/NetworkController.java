@@ -133,7 +133,7 @@ public class NetworkController {
     private <T> ResponseEntity<T> withNetworkAdmin(String sessionToken, NetworkOperation<T> operation) {
         return authenticationService.getUserFromSession(sessionToken)
                 .filter(user -> userRoleService.hasPermission(user, "MANAGE_NETWORK_CONFIG") ||
-                               "ADMIN".equalsIgnoreCase(user.getRole()))
+                               "ADMIN".equalsIgnoreCase(user.getRoleDisplayName()))
                 .map(operation::execute)
                 .orElse(ResponseEntity.status(403).build());
     }

@@ -8,8 +8,10 @@ import com.heronix.talk.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,6 +32,8 @@ public class AdminController {
     private final AuditService auditService;
     private final AuthenticationService authenticationService;
     private final UserService userService;
+    private final SisSyncService sisSyncService;
+    private final UserImportService userImportService;
 
     // ==================== Dashboard ====================
 
@@ -310,11 +314,113 @@ public class AdminController {
         });
     }
 
+    // ==================== SIS Sync & Import ====================
+
+    @GetMapping("/sis/status")
+    public ResponseEntity<SisSyncService.SisSyncStatusDTO> getSisStatus(
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
+                return ResponseEntity.status(403).build();
+            }
+            return ResponseEntity.ok(sisSyncService.getStatus());
+        });
+    }
+
+    @PostMapping("/sis/sync")
+    public ResponseEntity<ImportResultDTO> triggerSisSync(
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
+                return ResponseEntity.status(403).build();
+            }
+            ImportResultDTO result = sisSyncService.syncFromApi();
+            return ResponseEntity.ok(result);
+        });
+    }
+
+    @PostMapping("/sis/test-connection")
+    public ResponseEntity<Map<String, Object>> testSisConnection(
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
+                return ResponseEntity.status(403).build();
+            }
+            boolean connected = sisSyncService.testConnection();
+            return ResponseEntity.ok(Map.of(
+                    "connected", connected,
+                    "timestamp", LocalDateTime.now().toString()
+            ));
+        });
+    }
+
+    @PostMapping(value = "/users/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImportResultDTO> importUsersFromFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
+                return ResponseEntity.status(403).build();
+            }
+            ImportResultDTO result = userImportService.importFromFile(file);
+            return ResponseEntity.ok(result);
+        });
+    }
+
+    @PostMapping("/users/import/path")
+    public ResponseEntity<ImportResultDTO> importUsersFromPath(
+            @RequestBody Map<String, String> body,
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
+                return ResponseEntity.status(403).build();
+            }
+            String filePath = body.get("path");
+            if (filePath == null || filePath.isBlank()) {
+                return ResponseEntity.badRequest().body(
+                        ImportResultDTO.createError("path", "File path is required"));
+            }
+            ImportResultDTO result = userImportService.importFromPath(filePath);
+            return ResponseEntity.ok(result);
+        });
+    }
+
+    @GetMapping("/users/import/files")
+    public ResponseEntity<List<String>> listImportFiles(
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
+                return ResponseEntity.status(403).build();
+            }
+            return ResponseEntity.ok(userImportService.listImportFiles());
+        });
+    }
+
+    @GetMapping("/users/import/template/csv")
+    public ResponseEntity<String> getCsvTemplate(
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(userImportService.getCsvTemplate());
+        });
+    }
+
+    @GetMapping("/users/import/template/json")
+    public ResponseEntity<String> getJsonTemplate(
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(userImportService.getJsonTemplate());
+        });
+    }
+
     // ==================== Helper Methods ====================
 
     private <T> ResponseEntity<T> withAdminUser(String sessionToken, AdminOperation<T> operation) {
         return authenticationService.getUserFromSession(sessionToken)
-                .filter(user -> userRoleService.isAdmin(user) || "ADMIN".equalsIgnoreCase(user.getRole()))
+                .filter(user -> userRoleService.isAdmin(user) || "ADMIN".equalsIgnoreCase(user.getRoleDisplayName()))
                 .map(operation::execute)
                 .orElse(ResponseEntity.status(403).build());
     }

@@ -179,11 +179,11 @@ public class UserRoleService {
      * Check if a user has a specific permission.
      */
     public boolean hasPermission(User user, String permission) {
-        if (user == null || user.getRole() == null) {
+        if (user == null || user.getRoleDisplayName() == null) {
             return false;
         }
 
-        UserRole role = userRoleRepository.findByName(user.getRole()).orElse(null);
+        UserRole role = userRoleRepository.findByName(user.getRoleDisplayName()).orElse(null);
         if (role == null || !role.isActive()) {
             return false;
         }
@@ -220,10 +220,10 @@ public class UserRoleService {
      * Check if user has admin privileges.
      */
     public boolean isAdmin(User user) {
-        if (user == null || user.getRole() == null) {
+        if (user == null || user.getRoleDisplayName() == null) {
             return false;
         }
-        UserRole role = userRoleRepository.findByName(user.getRole()).orElse(null);
+        UserRole role = userRoleRepository.findByName(user.getRoleDisplayName()).orElse(null);
         return role != null && role.hasAdminPrivileges();
     }
 }
