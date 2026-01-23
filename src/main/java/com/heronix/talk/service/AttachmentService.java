@@ -35,6 +35,7 @@ public class AttachmentService {
 
     private final AttachmentRepository attachmentRepository;
     private final MessageRepository messageRepository;
+    private final FileValidationService fileValidationService;
 
     @Value("${heronix.talk.storage.path:./uploads}")
     private String storagePath;
@@ -47,13 +48,10 @@ public class AttachmentService {
      */
     @Transactional
     public Attachment uploadAttachment(MultipartFile file, Long messageId, User uploader) throws IOException {
-        // Validate file
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
-        }
-
-        if (file.getSize() > maxFileSize) {
-            throw new IllegalArgumentException("File size exceeds maximum allowed (" + (maxFileSize / 1024 / 1024) + "MB)");
+        // Comprehensive file validation (size, type, magic bytes, security checks)
+        FileValidationService.ValidationResult validation = fileValidationService.validateFile(file);
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException(validation.getMessage());
         }
 
         // Get the message
@@ -116,13 +114,10 @@ public class AttachmentService {
      */
     @Transactional
     public Message uploadFileWithMessage(MultipartFile file, Long channelId, User sender, String caption) throws IOException {
-        // Validate file
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
-        }
-
-        if (file.getSize() > maxFileSize) {
-            throw new IllegalArgumentException("File size exceeds maximum allowed (" + (maxFileSize / 1024 / 1024) + "MB)");
+        // Comprehensive file validation (size, type, magic bytes, security checks)
+        FileValidationService.ValidationResult validation = fileValidationService.validateFile(file);
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException(validation.getMessage());
         }
 
         // Generate storage path

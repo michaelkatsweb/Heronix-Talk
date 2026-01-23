@@ -101,6 +101,12 @@
             <version>3.1.8</version>
         </dependency>
 
+        <!-- Spring AOP for request logging -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
