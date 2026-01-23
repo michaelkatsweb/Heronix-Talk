@@ -1,10 +1,10 @@
 package com.heronix.talk.controller;
 
-import com.heronix.talk.service.ChannelService;
 import com.heronix.talk.service.NewsService;
 import com.heronix.talk.service.PresenceService;
 import com.heronix.talk.service.UserService;
 import com.heronix.talk.websocket.ChatWebSocketHandler;
+import com.heronix.talk.websocket.WebSocketSessionManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +30,7 @@ public class SystemController {
     private final PresenceService presenceService;
     private final NewsService newsService;
     private final ChatWebSocketHandler webSocketHandler;
+    private final WebSocketSessionManager sessionManager;
 
     @Value("${spring.application.name}")
     private String applicationName;
@@ -61,6 +62,9 @@ public class SystemController {
         users.put("websocketConnections", webSocketHandler.getActiveConnectionCount());
         status.put("users", users);
 
+        // WebSocket session statistics
+        status.put("websocket", sessionManager.getStatistics());
+
         // News statistics
         Map<String, Object> news = new HashMap<>();
         news.put("active", newsService.getActiveNewsCount());
@@ -70,6 +74,11 @@ public class SystemController {
         status.put("status", "RUNNING");
 
         return ResponseEntity.ok(status);
+    }
+
+    @GetMapping("/metrics/websocket")
+    public ResponseEntity<Map<String, Object>> websocketMetrics() {
+        return ResponseEntity.ok(sessionManager.getStatistics());
     }
 
     @GetMapping("/info")

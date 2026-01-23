@@ -15,7 +15,10 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.web.socket.*;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
@@ -44,6 +47,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ChannelService channelService;
     private final UserService userService;
     private final PresenceService presenceService;
+    private final WebSocketSessionManager sessionManager;
 
     // Active WebSocket sessions: sessionId -> WebSocketSession
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
@@ -87,8 +91,22 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         Long userId = (Long) session.getAttributes().get("userId");
         String sessionToken = (String) session.getAttributes().get("sessionToken");
 
+        // Check connection limits
+        if (!sessionManager.canAcceptConnection()) {
+            try {
+                session.close(CloseStatus.SERVICE_OVERLOAD);
+                log.warn("Connection rejected due to capacity limits: user={}", userId);
+                return;
+            } catch (IOException e) {
+                log.error("Error closing rejected session", e);
+            }
+        }
+
         sessions.put(session.getId(), session);
         userSessions.put(userId, session.getId());
+
+        // Register with session manager for monitoring
+        sessionManager.registerSession(session, userId);
 
         // Update auth service with websocket session
         authenticationService.updateWebsocketSession(sessionToken, session.getId());
@@ -99,7 +117,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             broadcastPresenceUpdate(presence);
         }
 
-        log.info("WebSocket connection established: user={}, sessionId={}", userId, session.getId());
+        log.info("WebSocket connection established: user={}, sessionId={}, totalConnections={}",
+                userId, session.getId(), sessionManager.getCurrentConnections().get());
     }
 
     @Override
@@ -108,6 +127,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         sessions.remove(session.getId());
         userSessions.remove(userId);
+
+        // Unregister from session manager
+        sessionManager.unregisterSession(session.getId());
 
         // Handle disconnect
         authenticationService.handleWebsocketDisconnect(session.getId());
@@ -121,8 +143,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
         }
 
-        log.info("WebSocket connection closed: user={}, sessionId={}, status={}",
-                userId, session.getId(), status);
+        log.info("WebSocket connection closed: user={}, sessionId={}, status={}, totalConnections={}",
+                userId, session.getId(), status, sessionManager.getCurrentConnections().get());
     }
 
     @Override
@@ -130,6 +152,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         try {
             Long userId = (Long) session.getAttributes().get("userId");
             User user = (User) session.getAttributes().get("user");
+
+            // Record activity for session health monitoring
+            sessionManager.recordActivity(session.getId());
 
             ChatWsMessage<?> wsMessage = objectMapper.readValue(
                     textMessage.getPayload(), ChatWsMessage.class);
