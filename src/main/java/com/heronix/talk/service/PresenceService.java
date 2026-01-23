@@ -100,6 +100,7 @@ public class PresenceService {
                 .orElse(null);
     }
 
+    @Transactional
     public void recordHeartbeat(Long userId) {
         lastHeartbeat.put(userId, LocalDateTime.now());
         userRepository.updateLastActivity(userId, LocalDateTime.now());

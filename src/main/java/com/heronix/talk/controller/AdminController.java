@@ -373,6 +373,51 @@ public class AdminController {
         });
     }
 
+    // ==================== SIS Account Validation ====================
+
+    @GetMapping("/sis/validation/status")
+    public ResponseEntity<Map<String, Object>> getSisValidationStatus(
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
+                return ResponseEntity.status(403).build();
+            }
+            LocalDateTime lastValidation = sisSyncService.getLastValidationTime();
+            return ResponseEntity.ok(Map.of(
+                    "lastValidationTime", lastValidation != null ? lastValidation.toString() : "never",
+                    "validationEnabled", true,
+                    "timestamp", LocalDateTime.now().toString()
+            ));
+        });
+    }
+
+    @PostMapping("/sis/validation/run")
+    public ResponseEntity<SisSyncService.ValidationResultDTO> runSisValidation(
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
+                return ResponseEntity.status(403).build();
+            }
+            log.info("Manual SIS account validation triggered by admin: {}", user.getUsername());
+            SisSyncService.ValidationResultDTO result = sisSyncService.validateAllSyncedUsers();
+            return ResponseEntity.ok(result);
+        });
+    }
+
+    @PostMapping("/sis/validation/user/{employeeId}")
+    public ResponseEntity<SisSyncService.ValidationResultDTO> validateSingleUser(
+            @PathVariable String employeeId,
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return withAdminUser(sessionToken, user -> {
+            if (!userRoleService.hasPermission(user, "IMPORT_DATA")) {
+                return ResponseEntity.status(403).build();
+            }
+            log.info("Manual validation for user {} triggered by admin: {}", employeeId, user.getUsername());
+            SisSyncService.ValidationResultDTO result = sisSyncService.validateUser(employeeId);
+            return ResponseEntity.ok(result);
+        });
+    }
+
     // ==================== SIS Direct Database Sync ====================
 
     @GetMapping("/sis/db/status")

@@ -33,10 +33,10 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
     @Query("SELECT c FROM Channel c WHERE c.channelType = 'ANNOUNCEMENT' AND c.active = true ORDER BY c.createdDate DESC")
     List<Channel> findAnnouncementChannels();
 
-    @Query("SELECT c FROM Channel c JOIN c.members m WHERE m.id = :userId AND c.active = true ORDER BY c.lastMessageTime DESC")
+    @Query("SELECT c FROM Channel c WHERE c.id IN (SELECT cm.channel.id FROM ChannelMembership cm WHERE cm.user.id = :userId AND cm.active = true) AND c.active = true ORDER BY c.lastMessageTime DESC")
     List<Channel> findChannelsByMemberId(@Param("userId") Long userId);
 
-    @Query("SELECT c FROM Channel c JOIN c.members m WHERE m.id = :userId AND c.channelType = :type AND c.active = true")
+    @Query("SELECT c FROM Channel c WHERE c.id IN (SELECT cm.channel.id FROM ChannelMembership cm WHERE cm.user.id = :userId AND cm.active = true) AND c.channelType = :type AND c.active = true")
     List<Channel> findChannelsByMemberIdAndType(@Param("userId") Long userId, @Param("type") ChannelType type);
 
     @Query("SELECT c FROM Channel c WHERE c.syncStatus = :status")

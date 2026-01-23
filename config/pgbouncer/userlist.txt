@@ -1,0 +1,26 @@
+; ============================================
+; PgBouncer User Authentication File
+; Format: "username" "password_hash"
+; ============================================
+;
+; Generate password hash using:
+;   echo -n "password_here""username_here" | md5sum
+;   Prefix with "md5"
+;
+; Or use plain text (less secure):
+;   "username" "plain_text_password"
+;
+; ============================================
+
+; Application user for Heronix Talk
+; Change this password in production!
+"heronix" "md5c5a5e3388d27f7f5c8a8f3e9d0b1a2c3"
+
+; Read-only user for reports/analytics (optional)
+; "heronix_reader" "md5a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+
+; Admin user for PgBouncer management
+"pgbouncer_admin" "md5admin_password_hash_here"
+
+; Stats user for monitoring
+"pgbouncer_stats" "md5stats_password_hash_here"

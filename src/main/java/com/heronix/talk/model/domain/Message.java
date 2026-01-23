@@ -22,7 +22,13 @@ import java.util.UUID;
         @Index(name = "idx_message_channel", columnList = "channel_id"),
         @Index(name = "idx_message_sender", columnList = "sender_id"),
         @Index(name = "idx_message_timestamp", columnList = "timestamp"),
-        @Index(name = "idx_message_uuid", columnList = "messageUuid", unique = true)
+        @Index(name = "idx_message_uuid", columnList = "messageUuid", unique = true),
+        // Composite index for channel message queries (most common query pattern)
+        @Index(name = "idx_message_channel_ts", columnList = "channel_id, timestamp"),
+        // Index for offline-first sync
+        @Index(name = "idx_message_sync", columnList = "syncStatus"),
+        // Index for client ID deduplication
+        @Index(name = "idx_message_client", columnList = "clientId")
 })
 @Data
 @Builder

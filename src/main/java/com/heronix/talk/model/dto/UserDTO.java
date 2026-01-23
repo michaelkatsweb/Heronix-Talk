@@ -31,6 +31,7 @@ public class UserDTO {
     private String avatarPath;
     private boolean active;
     private boolean notificationsEnabled;
+    private boolean soundEnabled;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime lastSeen;
@@ -55,6 +56,7 @@ public class UserDTO {
                 .avatarPath(user.getAvatarPath())
                 .active(user.isActive())
                 .notificationsEnabled(user.isNotificationsEnabled())
+                .soundEnabled(user.isSoundEnabled())
                 .lastSeen(user.getLastSeen())
                 .lastActivity(user.getLastActivity())
                 .build();

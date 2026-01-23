@@ -23,10 +23,10 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
     Optional<Message> findByMessageUuid(String messageUuid);
 
-    @Query("SELECT m FROM Message m WHERE m.channel.id = :channelId AND m.deleted = false ORDER BY m.timestamp DESC")
+    @Query("SELECT m FROM Message m LEFT JOIN FETCH m.channel LEFT JOIN FETCH m.sender WHERE m.channel.id = :channelId AND m.deleted = false ORDER BY m.timestamp DESC")
     Page<Message> findByChannelIdOrderByTimestampDesc(@Param("channelId") Long channelId, Pageable pageable);
 
-    @Query("SELECT m FROM Message m WHERE m.channel.id = :channelId AND m.deleted = false ORDER BY m.timestamp ASC")
+    @Query("SELECT m FROM Message m LEFT JOIN FETCH m.channel LEFT JOIN FETCH m.sender WHERE m.channel.id = :channelId AND m.deleted = false ORDER BY m.timestamp ASC")
     List<Message> findByChannelIdOrderByTimestampAsc(@Param("channelId") Long channelId);
 
     @Query("SELECT m FROM Message m WHERE m.channel.id = :channelId AND m.timestamp > :since AND m.deleted = false ORDER BY m.timestamp ASC")

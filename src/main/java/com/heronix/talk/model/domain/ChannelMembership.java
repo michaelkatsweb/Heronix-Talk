@@ -12,7 +12,11 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "channel_memberships", indexes = {
         @Index(name = "idx_membership_user", columnList = "user_id"),
-        @Index(name = "idx_membership_channel", columnList = "channel_id")
+        @Index(name = "idx_membership_channel", columnList = "channel_id"),
+        // Composite index for active memberships by channel (critical for broadcasts)
+        @Index(name = "idx_membership_channel_active", columnList = "channel_id, active"),
+        // Index for user's active channels
+        @Index(name = "idx_membership_user_active", columnList = "user_id, active")
 }, uniqueConstraints = {
         @UniqueConstraint(columnNames = {"user_id", "channel_id"})
 })

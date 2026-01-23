@@ -164,6 +164,30 @@ public class UserService {
         return userRepository.countByActiveTrue();
     }
 
+    /**
+     * Update user preferences/settings.
+     * @return Updated UserDTO or null if user not found
+     */
+    @Transactional
+    public UserDTO updatePreferences(Long userId, Boolean notificationsEnabled, Boolean soundEnabled, String statusMessage) {
+        return userRepository.findById(userId)
+                .map(user -> {
+                    if (notificationsEnabled != null) {
+                        user.setNotificationsEnabled(notificationsEnabled);
+                    }
+                    if (soundEnabled != null) {
+                        user.setSoundEnabled(soundEnabled);
+                    }
+                    if (statusMessage != null) {
+                        user.setStatusMessage(statusMessage);
+                    }
+                    User saved = userRepository.save(user);
+                    log.info("User {} preferences updated", user.getUsername());
+                    return UserDTO.fromEntity(saved);
+                })
+                .orElse(null);
+    }
+
     public boolean existsByUsername(String username) {
         return userRepository.existsByUsername(username);
     }

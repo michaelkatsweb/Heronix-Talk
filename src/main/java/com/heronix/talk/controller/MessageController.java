@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * REST controller for message operations.
@@ -29,8 +30,42 @@ public class MessageController {
     public ResponseEntity<List<MessageDTO>> getChannelMessages(
             @PathVariable Long channelId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
-        return ResponseEntity.ok(messageService.getChannelMessages(channelId, page, size));
+            @RequestParam(defaultValue = "50") int size,
+            @RequestHeader(value = "X-Session-Token", required = false) String sessionToken) {
+
+        // Validate channel exists
+        var channelOpt = channelService.findById(channelId);
+        if (channelOpt.isEmpty()) {
+            log.warn("Channel {} not found", channelId);
+            return ResponseEntity.notFound().build();
+        }
+
+        var channel = channelOpt.get();
+
+        // For public channels, allow access without authentication
+        if ("PUBLIC".equals(channel.getChannelType())) {
+            return ResponseEntity.ok(messageService.getChannelMessages(channelId, page, size));
+        }
+
+        // For non-public channels, require authentication and membership
+        if (sessionToken == null || sessionToken.isEmpty()) {
+            log.warn("No session token provided for private channel {}", channelId);
+            return ResponseEntity.status(401).build();
+        }
+
+        return authenticationService.getUserFromSession(sessionToken)
+                .map(user -> {
+                    if (channelService.isMember(channelId, user.getId())) {
+                        return ResponseEntity.ok(messageService.getChannelMessages(channelId, page, size));
+                    } else {
+                        log.warn("User {} is not a member of channel {}", user.getId(), channelId);
+                        return ResponseEntity.status(403).<List<MessageDTO>>build();
+                    }
+                })
+                .orElseGet(() -> {
+                    log.warn("Invalid session token for channel {} access", channelId);
+                    return ResponseEntity.status(401).build();
+                });
     }
 
     @GetMapping("/channel/{channelId}/pinned")
@@ -109,16 +144,53 @@ public class MessageController {
     }
 
     @PostMapping("/{id}/reaction")
-    public ResponseEntity<Void> addReaction(
+    public ResponseEntity<Map<String, List<Long>>> addReaction(
             @PathVariable Long id,
             @RequestParam String emoji,
             @RequestHeader("X-Session-Token") String sessionToken) {
         return authenticationService.getUserFromSession(sessionToken)
                 .map(user -> {
-                    messageService.addReaction(id, emoji, user.getId());
-                    return ResponseEntity.ok().<Void>build();
+                    var reactions = messageService.addReaction(id, emoji, user.getId());
+                    return reactions != null
+                            ? ResponseEntity.ok(reactions)
+                            : ResponseEntity.notFound().<Map<String, List<Long>>>build();
                 })
                 .orElse(ResponseEntity.status(401).build());
+    }
+
+    @DeleteMapping("/{id}/reaction")
+    public ResponseEntity<Map<String, List<Long>>> removeReaction(
+            @PathVariable Long id,
+            @RequestParam String emoji,
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return authenticationService.getUserFromSession(sessionToken)
+                .map(user -> {
+                    var reactions = messageService.removeReaction(id, emoji, user.getId());
+                    return reactions != null
+                            ? ResponseEntity.ok(reactions)
+                            : ResponseEntity.notFound().<Map<String, List<Long>>>build();
+                })
+                .orElse(ResponseEntity.status(401).build());
+    }
+
+    @PostMapping("/{id}/reaction/toggle")
+    public ResponseEntity<Map<String, List<Long>>> toggleReaction(
+            @PathVariable Long id,
+            @RequestParam String emoji,
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return authenticationService.getUserFromSession(sessionToken)
+                .map(user -> {
+                    var reactions = messageService.toggleReaction(id, emoji, user.getId());
+                    return reactions != null
+                            ? ResponseEntity.ok(reactions)
+                            : ResponseEntity.notFound().<Map<String, List<Long>>>build();
+                })
+                .orElse(ResponseEntity.status(401).build());
+    }
+
+    @GetMapping("/{id}/reactions")
+    public ResponseEntity<Map<String, List<Long>>> getReactions(@PathVariable Long id) {
+        return ResponseEntity.ok(messageService.getReactions(id));
     }
 
     @PostMapping("/channel/{channelId}/read")
@@ -132,5 +204,29 @@ public class MessageController {
                     return ResponseEntity.ok().<Void>build();
                 })
                 .orElse(ResponseEntity.status(401).build());
+    }
+
+    @GetMapping("/{id}/read-receipts")
+    public ResponseEntity<Map<String, Object>> getReadReceipts(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Session-Token", required = false) String sessionToken) {
+        var receipts = messageService.getReadReceipts(id);
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("messageId", id);
+        response.put("readCount", receipts.size());
+        response.put("receipts", receipts);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/mentions")
+    public ResponseEntity<List<Long>> getMentions(@PathVariable Long id) {
+        return ResponseEntity.ok(messageService.getMentionedUserIds(id));
+    }
+
+    @GetMapping("/{id}/is-mentioned/{userId}")
+    public ResponseEntity<Boolean> isMentioned(
+            @PathVariable Long id,
+            @PathVariable Long userId) {
+        return ResponseEntity.ok(messageService.isMentioned(id, userId));
     }
 }

@@ -54,7 +54,12 @@ public class SisUserDTO {
 
     // Active status - supports: active, isActive, is_active, enabled, status
     @JsonAlias({"isActive", "is_active", "enabled"})
+    @Builder.Default
     private boolean active = true;
+
+    // Password hash from SIS (BCrypt) for authentication sync
+    @JsonAlias({"passwordHash", "password_hash", "hashedPassword"})
+    private String password;
 
     // Additional fields that might come from Heronix-Application
     @JsonAlias({"full_name", "displayName", "display_name"})

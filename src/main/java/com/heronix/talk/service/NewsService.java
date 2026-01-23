@@ -2,9 +2,11 @@ package com.heronix.talk.service;
 
 import com.heronix.talk.model.domain.NewsItem;
 import com.heronix.talk.model.domain.User;
+import com.heronix.talk.model.dto.ChatWsMessage;
 import com.heronix.talk.model.dto.NewsItemDTO;
 import com.heronix.talk.model.enums.SyncStatus;
 import com.heronix.talk.repository.NewsItemRepository;
+import com.heronix.talk.websocket.ChatWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 public class NewsService {
 
     private final NewsItemRepository newsItemRepository;
+    private final ChatWebSocketHandler webSocketHandler;
 
     public Optional<NewsItem> findById(Long id) {
         return newsItemRepository.findById(id);
@@ -78,7 +81,12 @@ public class NewsService {
                 .syncStatus(SyncStatus.LOCAL_ONLY)
                 .build();
 
-        return newsItemRepository.save(newsItem);
+        NewsItem saved = newsItemRepository.save(newsItem);
+
+        // Broadcast to all connected clients
+        webSocketHandler.broadcastNews(NewsItemDTO.fromEntity(saved), ChatWsMessage.ACTION_CREATE);
+
+        return saved;
     }
 
     @Transactional
@@ -93,8 +101,13 @@ public class NewsService {
                 .syncStatus(SyncStatus.LOCAL_ONLY)
                 .build();
 
+        NewsItem saved = newsItemRepository.save(newsItem);
         log.info("Created urgent news: {}", headline);
-        return newsItemRepository.save(newsItem);
+
+        // Broadcast urgent news to all connected clients immediately
+        webSocketHandler.broadcastNews(NewsItemDTO.fromEntity(saved), ChatWsMessage.ACTION_CREATE);
+
+        return saved;
     }
 
     @Transactional

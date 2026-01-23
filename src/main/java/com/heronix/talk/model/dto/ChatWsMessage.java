@@ -37,6 +37,7 @@ public class ChatWsMessage<T> {
     public static final String TYPE_TYPING = "TYPING";
     public static final String TYPE_NOTIFICATION = "NOTIFICATION";
     public static final String TYPE_NEWS = "NEWS";
+    public static final String TYPE_ALERT = "ALERT";
     public static final String TYPE_ERROR = "ERROR";
     public static final String TYPE_ACK = "ACK";
     public static final String TYPE_SYSTEM = "SYSTEM";

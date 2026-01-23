@@ -25,14 +25,16 @@ public class SisIntegrationProperties {
     public static class Sync {
         private boolean enabled = false;
         private int intervalSeconds = 300;
+        private boolean validationEnabled = true;  // Enable periodic account validation
+        private int validationIntervalSeconds = 900; // 15 minutes default
     }
 
     @Getter
     @Setter
     public static class Api {
         private boolean enabled = true;
-        private String baseUrl = "http://localhost:8080";
-        private String endpoint = "/api/teachers";
+        private String baseUrl = "http://localhost:9580";
+        private String endpoint = "/api/teacher/all";
         private String token = "";
         private int timeoutSeconds = 30;
     }

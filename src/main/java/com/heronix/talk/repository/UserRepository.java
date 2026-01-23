@@ -92,4 +92,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countOnlineUsers();
 
     long countByLockedTrue();
+
+    /**
+     * Find all users synced from a specific source (e.g., "SIS", "SIS-AUTO").
+     */
+    @Query("SELECT u FROM User u WHERE u.syncSource LIKE CONCAT('%', :source, '%')")
+    List<User> findBySyncSourceContaining(@Param("source") String source);
+
+    /**
+     * Find all active users synced from SIS.
+     */
+    @Query("SELECT u FROM User u WHERE u.syncSource LIKE '%SIS%' AND u.active = true")
+    List<User> findActiveSisUsers();
 }

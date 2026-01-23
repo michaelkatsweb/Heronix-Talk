@@ -162,8 +162,11 @@ public class ChannelService {
                 .build();
 
         membershipRepository.save(membership);
-        // Note: We don't directly manipulate the channel.members or user.channels collections
-        // as the relationship is managed through ChannelMembership entity
+
+        // Update member count on the channel
+        long memberCount = membershipRepository.countByChannelIdAndActiveTrue(channel.getId());
+        channel.setMemberCount((int) memberCount);
+        channelRepository.save(channel);
 
         log.info("User {} added to channel {}", user.getUsername(), channel.getName());
     }
@@ -231,6 +234,69 @@ public class ChannelService {
     @Transactional(readOnly = true)
     public long getMemberCount(Long channelId) {
         return membershipRepository.countByChannelIdAndActiveTrue(channelId);
+    }
+
+    /**
+     * Update channel-specific preferences for a user.
+     */
+    @Transactional
+    public void updateChannelPreferences(Long channelId, Long userId, Boolean muted, Boolean pinned,
+                                         Boolean favorite, Boolean notifyOnMessage, Boolean notifyOnMention) {
+        membershipRepository.findByUserIdAndChannelId(userId, channelId).ifPresent(membership -> {
+            if (muted != null) {
+                membership.setMuted(muted);
+            }
+            if (pinned != null) {
+                membership.setPinned(pinned);
+            }
+            if (favorite != null) {
+                membership.setFavorite(favorite);
+            }
+            if (notifyOnMessage != null) {
+                membership.setNotifyOnMessage(notifyOnMessage);
+            }
+            if (notifyOnMention != null) {
+                membership.setNotifyOnMention(notifyOnMention);
+            }
+            membershipRepository.save(membership);
+            log.info("Channel {} preferences updated for user {}", channelId, userId);
+        });
+    }
+
+    /**
+     * Toggle mute status for a channel.
+     */
+    @Transactional
+    public void toggleMute(Long channelId, Long userId) {
+        membershipRepository.findByUserIdAndChannelId(userId, channelId).ifPresent(membership -> {
+            membership.setMuted(!membership.isMuted());
+            membershipRepository.save(membership);
+            log.info("Channel {} mute toggled to {} for user {}", channelId, membership.isMuted(), userId);
+        });
+    }
+
+    /**
+     * Toggle favorite status for a channel.
+     */
+    @Transactional
+    public void toggleFavorite(Long channelId, Long userId) {
+        membershipRepository.findByUserIdAndChannelId(userId, channelId).ifPresent(membership -> {
+            membership.setFavorite(!membership.isFavorite());
+            membershipRepository.save(membership);
+            log.info("Channel {} favorite toggled to {} for user {}", channelId, membership.isFavorite(), userId);
+        });
+    }
+
+    /**
+     * Toggle pin status for a channel.
+     */
+    @Transactional
+    public void togglePin(Long channelId, Long userId) {
+        membershipRepository.findByUserIdAndChannelId(userId, channelId).ifPresent(membership -> {
+            membership.setPinned(!membership.isPinned());
+            membershipRepository.save(membership);
+            log.info("Channel {} pin toggled to {} for user {}", channelId, membership.isPinned(), userId);
+        });
     }
 
     /**

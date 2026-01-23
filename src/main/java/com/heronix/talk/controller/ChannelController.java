@@ -3,6 +3,7 @@ package com.heronix.talk.controller;
 import com.heronix.talk.model.domain.Channel;
 import com.heronix.talk.model.domain.User;
 import com.heronix.talk.model.dto.ChannelDTO;
+import com.heronix.talk.model.dto.ChannelPreferencesDTO;
 import com.heronix.talk.model.dto.CreateChannelRequest;
 import com.heronix.talk.service.AuthenticationService;
 import com.heronix.talk.service.ChannelService;
@@ -126,5 +127,74 @@ public class ChannelController {
         // Would need permission check
         channelService.deleteChannel(id);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Update channel-specific preferences for the current user.
+     */
+    @PutMapping("/{id}/preferences")
+    public ResponseEntity<Void> updateChannelPreferences(
+            @PathVariable Long id,
+            @RequestBody ChannelPreferencesDTO preferences,
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return authenticationService.getUserFromSession(sessionToken)
+                .map(user -> {
+                    channelService.updateChannelPreferences(
+                            id,
+                            user.getId(),
+                            preferences.getMuted(),
+                            preferences.getPinned(),
+                            preferences.getFavorite(),
+                            preferences.getNotifyOnMessage(),
+                            preferences.getNotifyOnMention()
+                    );
+                    return ResponseEntity.ok().<Void>build();
+                })
+                .orElse(ResponseEntity.status(401).build());
+    }
+
+    /**
+     * Toggle mute status for a channel.
+     */
+    @PostMapping("/{id}/mute")
+    public ResponseEntity<Void> toggleMute(
+            @PathVariable Long id,
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return authenticationService.getUserFromSession(sessionToken)
+                .map(user -> {
+                    channelService.toggleMute(id, user.getId());
+                    return ResponseEntity.ok().<Void>build();
+                })
+                .orElse(ResponseEntity.status(401).build());
+    }
+
+    /**
+     * Toggle favorite status for a channel.
+     */
+    @PostMapping("/{id}/favorite")
+    public ResponseEntity<Void> toggleFavorite(
+            @PathVariable Long id,
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return authenticationService.getUserFromSession(sessionToken)
+                .map(user -> {
+                    channelService.toggleFavorite(id, user.getId());
+                    return ResponseEntity.ok().<Void>build();
+                })
+                .orElse(ResponseEntity.status(401).build());
+    }
+
+    /**
+     * Toggle pin status for a channel.
+     */
+    @PostMapping("/{id}/pin")
+    public ResponseEntity<Void> togglePin(
+            @PathVariable Long id,
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        return authenticationService.getUserFromSession(sessionToken)
+                .map(user -> {
+                    channelService.togglePin(id, user.getId());
+                    return ResponseEntity.ok().<Void>build();
+                })
+                .orElse(ResponseEntity.status(401).build());
     }
 }

@@ -1,6 +1,7 @@
 package com.heronix.talk.controller;
 
 import com.heronix.talk.model.dto.UserDTO;
+import com.heronix.talk.model.dto.UserPreferencesDTO;
 import com.heronix.talk.model.enums.UserRole;
 import com.heronix.talk.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -56,5 +57,39 @@ public class UserController {
     @GetMapping("/search")
     public ResponseEntity<List<UserDTO>> searchUsers(@RequestParam String q) {
         return ResponseEntity.ok(userService.searchUsers(q));
+    }
+
+    /**
+     * Update user preferences/settings.
+     */
+    @PutMapping("/{id}/preferences")
+    public ResponseEntity<UserDTO> updatePreferences(
+            @PathVariable Long id,
+            @RequestBody UserPreferencesDTO preferences) {
+        log.info("Updating preferences for user {}", id);
+        UserDTO updated = userService.updatePreferences(
+                id,
+                preferences.getNotificationsEnabled(),
+                preferences.getSoundEnabled(),
+                preferences.getStatusMessage()
+        );
+        if (updated != null) {
+            return ResponseEntity.ok(updated);
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    /**
+     * Get user preferences/settings.
+     */
+    @GetMapping("/{id}/preferences")
+    public ResponseEntity<UserPreferencesDTO> getPreferences(@PathVariable Long id) {
+        return userService.findById(id)
+                .map(user -> ResponseEntity.ok(UserPreferencesDTO.builder()
+                        .notificationsEnabled(user.isNotificationsEnabled())
+                        .soundEnabled(user.isSoundEnabled())
+                        .statusMessage(user.getStatusMessage())
+                        .build()))
+                .orElse(ResponseEntity.notFound().build());
     }
 }

@@ -18,7 +18,11 @@ import java.util.Set;
 @Entity
 @Table(name = "channels", indexes = {
         @Index(name = "idx_channel_name", columnList = "name"),
-        @Index(name = "idx_channel_type", columnList = "channelType")
+        @Index(name = "idx_channel_type", columnList = "channelType"),
+        // Index for DM lookup
+        @Index(name = "idx_channel_dm_key", columnList = "directMessageKey"),
+        // Index for active channels by last message time
+        @Index(name = "idx_channel_active_lastmsg", columnList = "active, lastMessageTime")
 })
 @Getter
 @Setter
