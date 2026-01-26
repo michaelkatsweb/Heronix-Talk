@@ -59,6 +59,10 @@ public class MessageDTO {
     // Client tracking
     private String clientId;
 
+    // Student messaging fields
+    private String category;      // ACADEMIC, ANNOUNCEMENT, PERSONAL, SYSTEM
+    private boolean canReply;     // Whether the recipient can reply to this message
+
     public static MessageDTO fromEntity(Message message) {
         if (message == null) return null;
 

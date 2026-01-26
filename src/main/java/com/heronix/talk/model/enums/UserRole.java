@@ -10,5 +10,6 @@ public enum UserRole {
     TEACHER,        // Teacher - standard staff access
     STAFF,          // Non-teaching staff
     COUNSELOR,      // School counselor
-    DEPARTMENT_HEAD // Department head - additional permissions
+    DEPARTMENT_HEAD, // Department head - additional permissions
+    STUDENT         // Student - can message teachers and receive announcements
 }
